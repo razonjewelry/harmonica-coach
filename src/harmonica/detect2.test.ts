@@ -66,3 +66,14 @@ describe('קצב בשירים', () => {
     expect(p.notes).toEqual(['C5', 'G5', 'F5'])
   })
 })
+
+describe('טאבים לפי פסוקיות', () => {
+  it('שורה חדשה וקו | מסיימים פסוקית', () => {
+    expect(parseTab('4+ 4+ 6+\n6- 6-').phrases).toEqual([3, 2])
+    expect(parseTab('4+ 4+ | 6+ 6- 5+').phrases).toEqual([2, 3])
+    expect(parseTab('4+ 5-').phrases).toEqual([2])
+  })
+  it('שורות ריקות מתעלמים מהן', () => {
+    expect(parseTab('4+ 4+\n\n6+').phrases).toEqual([2, 1])
+  })
+})

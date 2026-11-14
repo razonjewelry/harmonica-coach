@@ -6,11 +6,12 @@ import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
 import { Karaoke } from './Karaoke'
+import { LineKaraoke } from './LineKaraoke'
 import { hebrewName } from '../lessons/data'
 import { useFlash } from './useFlash'
 
 /** מאזין לרצף צלילים דרך המיקרופון ומציג מה לנגן עכשיו. משמש לתרגול ולמנגינות. */
-export function NotePlayer({ notes, lyrics, beats, bpm = 100, onDone }: { notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; onDone?: () => void }) {
+export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }: { notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; phrases?: number[]; onDone?: () => void }) {
   const matcher = useRef(new SequenceMatcher(notes))
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
@@ -70,7 +71,9 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, onDone }: { notes:
         <HarmonicaView target={shownTarget} heard={previewIdx === null ? frame?.stable?.note ?? null : null} />
       </div>
       <MicBar status={mic.status} onStart={() => void mic.start()} />
-      {lyrics ? (
+      {lyrics && phrases ? (
+        <LineKaraoke lyrics={lyrics} phrases={phrases} notes={notes} index={shownIndex} />
+      ) : lyrics ? (
         <Karaoke lyrics={lyrics} notes={notes} index={shownIndex} compact />
       ) : (
         <div className="dots" dir="ltr">

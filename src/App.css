@@ -79,3 +79,12 @@ hr { border: 0; border-top: 1px solid var(--panel2); margin: 16px 0; }
 .chip.ok { background: var(--teal); color: #06222a; font-weight: 700; }
 .sticky .harp { margin: 8px 0 4px; }
 .sticky .cell { padding: 5px 0; font-size: 11px; }
+
+.kline.lyric { flex-direction: column; gap: 6px; }
+.ltext { font-size: 22px; font-weight: 700; line-height: 1.5; color: var(--text); }
+.lholes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-start; }
+.hc { min-width: 36px; text-align: center; padding: 6px 8px; border-radius: 10px; background: var(--panel2); color: var(--sub); font-size: 15px; }
+.hc.done { background: #0d3a3a; color: var(--teal); }
+.hc.cur { background: var(--warn); color: #2a1d00; font-weight: 800; transform: scale(1.1); }
+
+select, input[type=file] { display: block; width: 100%; margin-top: 6px; padding: 12px; font-size: 16px; border-radius: 12px; border: 1px solid var(--panel2); background: #0d1d38; color: var(--text); font-family: inherit; }
