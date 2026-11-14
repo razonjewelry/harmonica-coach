@@ -130,6 +130,15 @@ export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | n
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
   const [pageHelp, setPageHelp] = useState(false)
+  const [pasted, setPasted] = useState<Incoming | null>(null)
+  const [pasteBox, setPasteBox] = useState(false)
+  const fromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text.trim()) { setPasted({ kind: 'text', data: text }); return }
+    } catch { /* אין הרשאה ללוח: נציג תיבת הדבקה */ }
+    setPasteBox(true)
+  }
   const [custom, setCustom] = useState<CustomSong[]>(() => loadSongs())
   const all: Item[] = [
     ...MELODIES,
@@ -145,6 +154,15 @@ export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | n
     } catch { /* בוטל */ }
   }
   if (incoming) return <IncomingScreen incoming={incoming} onCancel={() => onIncomingDone?.()} onSave={(s) => { persist([...custom, s]); onIncomingDone?.() }} />
+  if (pasted) return <IncomingScreen incoming={pasted} onCancel={() => setPasted(null)} onSave={(s) => { persist([...custom, s]); setPasted(null) }} />
+  if (pasteBox) return (
+    <div className="card">
+      <h2>הדבק את הדף</h2>
+      <p className="sub">לחיצה ארוכה בתיבה ואז "הדבק".</p>
+      <textarea className="pastebox" rows={6} autoFocus onChange={(e) => { const v = e.target.value; if (v.trim().length > 10) { setPasteBox(false); setPasted({ kind: 'text', data: v }) } }} />
+      <button className="btn" onClick={() => setPasteBox(false)}>ביטול</button>
+    </div>
+  )
   if (pageHelp) return <PageHelp onBack={() => setPageHelp(false)} />
   if (importing) return <ImportSong onCancel={() => setImporting(false)} onSave={(s) => { persist([...custom, s]); setImporting(false) }} />
   if (adding) return <SongForm onCancel={() => setAdding(false)} onSave={(s) => { persist([...custom, s]); setAdding(false) }} />
@@ -161,6 +179,7 @@ export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | n
           </div>
         ))}
         <button className="btn primary big" onClick={() => setImporting(true)}>📁 ייבא שיר מקובץ (MIDI / KAR)</button>
+        <button className="btn primary big" onClick={() => void fromClipboard()}>📋 הדבק שיר שהעתקת מדף טאבים</button>
         <button className="btn big" onClick={() => setPageHelp(true)}>🔖 הוסף שיר מדף טאבים (סימנייה)</button>
         <button className="btn big" onClick={() => setAdding(true)}>➕ הוסף שיר ידנית</button>
       </div>

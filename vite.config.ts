@@ -21,6 +21,7 @@ export default defineConfig({
         start_url: './',
         scope: './',
         display: 'standalone',
+        share_target: { action: './', method: 'GET', params: { title: 'title', text: 'text', url: 'url' } },
         orientation: 'portrait',
         background_color: '#0a1628',
         theme_color: '#0a1628',

@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { findHole } from '../harmonica/notes'
-import { bookmarklet, parsePageLines, unpackJson } from '../lessons/share'
+import { bookmarklet, parsePageLines, parsePageText, unpackJson } from '../lessons/share'
 import type { CustomSong } from '../lessons/tab'
 
-export interface Incoming { kind: 'song' | 'page'; data: string }
+export interface Incoming { kind: 'song' | 'page' | 'text'; data: string; title?: string }
 
 /** קורא את ה-# של הכתובת: #song=... (שיר משותף) או #page=... (מהסימנייה בדף טאבים) */
 export function readIncoming(): Incoming | null {
   const m = /^#(song|page)=(.+)$/.exec(window.location.hash)
-  return m ? { kind: m[1] as 'song' | 'page', data: m[2] } : null
+  if (m) return { kind: m[1] as 'song' | 'page', data: m[2] }
+  // שיתוף מאנדרואיד (Share > Harmonica Coach): הטקסט מגיע בפרמטרים של הכתובת
+  const q = new URLSearchParams(window.location.search)
+  const text = q.get('text')
+  if (text) return { kind: 'text', data: text, title: q.get('title') ?? '' }
+  return null
 }
 
 const tag = (n: string) => {
@@ -33,8 +38,9 @@ export function IncomingScreen({ incoming, onSave, onCancel }: { incoming: Incom
           if (!Array.isArray(s.notes) || !s.notes.length || s.notes.some((n) => !findHole(n).length)) throw new Error('הקישור פגום')
           if (alive) { setDraft({ title: s.title, notes: s.notes, beats: s.beats, lyrics: s.lyrics ?? [], phrases: s.phrases }); setTitle(s.title) }
         } else {
-          const p = await unpackJson<{ t: string; l: string[] }>(incoming.data)
-          const r = parsePageLines(p.t ?? '', p.l ?? [])
+          const r = incoming.kind === 'text'
+            ? parsePageText(incoming.title ?? '', incoming.data)
+            : await (async () => { const p = await unpackJson<{ t: string; l: string[] }>(incoming.data); return parsePageLines(p.t ?? '', p.l ?? []) })()
           if ('error' in r) throw new Error(r.error)
           const hasLyrics = r.lyrics.some(Boolean)
           if (alive) { setDraft({ title: r.title, notes: r.notes, lyrics: hasLyrics ? r.lyrics : [], phrases: r.phrases }); setTitle(r.title) }

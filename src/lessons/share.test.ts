@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isTabLine, parsePageLines, unpackJson, songLink, bookmarklet } from './share'
+import { isTabLine, parsePageLines, parsePageText, unpackJson, songLink, bookmarklet } from './share'
 
 describe('ייבוא מדף טאבים', () => {
   it('מזהה שורת טאבים: מינוס לפני או אחרי המספר', () => {
@@ -40,5 +40,19 @@ describe('שיתוף בקישור', () => {
     const b = bookmarklet('https://x.test/')
     expect(b.startsWith('javascript:')).toBe(true)
     expect(() => new Function(decodeURIComponent(b.slice('javascript:'.length)))).not.toThrow()
+  })
+})
+
+describe('הדבקת דף שלם שהועתק', () => {
+  it('מוצא טאבים ומילים בתוך טקסט של דף שלם עם תפריטים', () => {
+    const text = 'תפריט\nשיר דמו\n\n-4 5 -5 6\nלה לה לה לה\nפרסומת\n6 -6 7\nלי-לי לי\nתגובות'
+    const r = parsePageText('', text)
+    if ('error' in r) throw new Error(r.error)
+    expect(r.notes.length).toBe(7)
+    expect(r.lyrics).toEqual(['לה לה לה לה', 'לילי לי'])
+    expect(r.title).toBe('תפריט')
+  })
+  it('טקסט בלי טאבים מחזיר הסבר', () => {
+    expect(parsePageText('', 'סתם טקסט')).toHaveProperty('error')
   })
 })

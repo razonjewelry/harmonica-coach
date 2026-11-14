@@ -172,7 +172,7 @@ export default function App() {
         )}
         {tab === 'practice' && <Practice />}
         {tab === 'free' && <FreeCoach />}
-        {tab === 'melodies' && <Melodies incoming={incoming} onIncomingDone={() => { setIncoming(null); history.replaceState(null, '', window.location.pathname) }} />}
+        {tab === 'melodies' && <Melodies incoming={incoming} onIncomingDone={() => { setIncoming(null); /* ניקוי # ו-? */ history.replaceState(null, '', window.location.pathname) }} />}
         {tab === 'settings' && <Settings onReset={() => update(resetProgress())} />}
       </main>
       <nav>

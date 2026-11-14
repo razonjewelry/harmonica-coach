@@ -75,3 +75,19 @@ export function bookmarklet(appUrl: string): string {
   const code = `(async()=>{const D='${DASH}';const re=new RegExp('^['+D+']?\\\\d{1,2}['+D+']?$');const raw=document.body.innerText.split(/\\n+/).map(s=>s.replace(/[\\u200e\\u200f]/g,'').trim()).filter(Boolean);const isTab=l=>{const t=l.split(/\\s+/);return t.length>=2&&t.every(x=>re.test(x))};const out=[];for(let i=0;i<raw.length;i++){if(isTab(raw[i])){out.push(raw[i]);const n=raw[i+1];if(n&&!isTab(n)&&n.length<200){out.push(n);i++}else out.push('')}}if(!out.length){alert('לא נמצאו טאבים בדף');return}const st=new Blob([JSON.stringify({t:document.title,l:out})]).stream().pipeThrough(new CompressionStream('deflate-raw'));const buf=new Uint8Array(await new Response(st).arrayBuffer());let s='';buf.forEach(b=>s+=String.fromCharCode(b));const b64=btoa(s).replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');window.open('${appUrl}#page='+b64,'_blank')})()`
   return 'javascript:' + encodeURIComponent(code)
 }
+
+/** טקסט שהועתק מדף שלם (בחר הכל > העתק): מוצא שורות טאבים ואת שורת המילים שמתחת לכל אחת */
+export function parsePageText(title: string, text: string): PageSong | { error: string } {
+  const raw = text.split(/\r?\n+/).map((x) => x.replace(/[\u200e\u200f]/g, '').trim()).filter(Boolean)
+  const out: string[] = []
+  for (let i = 0; i < raw.length; i++) {
+    if (!isTabLine(raw[i])) continue
+    out.push(raw[i])
+    const n = raw[i + 1]
+    if (n && !isTabLine(n) && n.length < 200) { out.push(n); i++ } else out.push('')
+  }
+  if (!out.length) return { error: 'לא מצאתי טאבים בטקסט שהועתק. ודא שהעתקת את כל הדף (בחר הכל ואז העתק).' }
+  // אם לא נמסר שם, ננסה את השורה הראשונה שאינה טאב
+  const guess = title || raw.find((l) => !isTabLine(l) && l.length < 60) || 'שיר חדש'
+  return parsePageLines(guess, out)
+}
