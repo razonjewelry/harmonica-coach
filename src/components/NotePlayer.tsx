@@ -8,13 +8,14 @@ import { MicBar } from './MicBar'
 import { NoteMeter } from './NoteMeter'
 import { Karaoke } from './Karaoke'
 import { hebrewName } from '../lessons/data'
+import { useFlash } from './useFlash'
 
 /** מאזין לרצף צלילים דרך המיקרופון ומציג מה לנגן עכשיו. משמש לתרגול ולמנגינות. */
 export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?: string[]; onDone?: () => void }) {
   const matcher = useRef(new SequenceMatcher(notes))
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
-  const [msg, setMsg] = useState('')
+  const [msg, flash, clearMsg] = useFlash()
   const [finished, setFinished] = useState(false)
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const previewRun = useRef(0)
@@ -27,8 +28,8 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
       // צליל מזוהה כללי, או אימות מחזוריות של הצליל המבוקש (לצלילים נשימתיים)
       const eff = f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null)
       const e = matcher.current.push(eff, f.onset)
-      if (e.advanced) { setIndex(e.index); setMsg('נכון!') }
-      if (e.wrong && matcher.current.target) setMsg(`שמעתי ${e.wrong}. צריך ${matcher.current.target}.`)
+      if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
+      if (e.wrong && matcher.current.target) flash(`שמעתי ${e.wrong}. צריך ${matcher.current.target}.`, 2500)
       if (e.done && !finished) { setFinished(true); onDone?.() }
     },
     finished || previewIdx !== null,
@@ -37,7 +38,7 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
 
   useEffect(() => () => { previewRun.current++ }, [])
 
-  const restart = () => { matcher.current = new SequenceMatcher(notes); setIndex(0); setMsg(''); setFinished(false) }
+  const restart = () => { matcher.current = new SequenceMatcher(notes); setIndex(0); clearMsg(); setFinished(false) }
   const stopPreview = () => { previewRun.current++; setPreviewIdx(null) }
   const preview = async () => {
     const my = ++previewRun.current
@@ -82,7 +83,7 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
           <div className="msg" aria-live="polite">{msg}</div>
           <div className="row">
             <button className="btn" onClick={restart}>התחל מהתחלה</button>
-            <button className="btn" onClick={() => { const m = matcher.current; m.skip(); setIndex(m.index); setMsg('דילגת על הצליל') }}>דלג על הצליל</button>
+            <button className="btn" onClick={() => { const m = matcher.current; m.skip(); setIndex(m.index); flash('דילגת על הצליל', 1200) }}>דלג על הצליל</button>
           </div>
         </>
       )}

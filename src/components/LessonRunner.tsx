@@ -9,6 +9,7 @@ import { speak, stopSpeaking, voiceEnabled, getHebrewVoice } from '../harmonica/
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
 import { NoteMeter } from './NoteMeter'
+import { useFlash } from './useFlash'
 
 type Phase = 'gate' | 'speaking' | 'ready' | 'listening' | 'success'
 
@@ -28,7 +29,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   const [phase, setPhase] = useState<Phase>('gate')
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
-  const [msg, setMsg] = useState('')
+  const [msg, flash, clearMsg] = useFlash()
   const matcher = useRef<SequenceMatcher | null>(null)
   const run = useRef(0)
   const step = lesson.steps[stepIdx]
@@ -39,8 +40,8 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     if (!m || m.done) return
     const t = m.target
     const e = m.push(f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null), f.onset)
-    if (e.advanced) { setIndex(e.index); setMsg('נכון!') }
-    if (e.wrong && m.target) setMsg(`שמעתי ${e.wrong}. צריך ${m.target}.`)
+    if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
+    if (e.wrong && m.target) flash(`שמעתי ${e.wrong}. צריך ${m.target}.`, 2500)
     if (e.done) setPhase('success')
   }, phase !== 'listening', () => matcher.current?.target ?? null)
 
@@ -51,7 +52,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     const alive = () => run.current === my
     matcher.current = null
     setIndex(0)
-    setMsg('')
+    clearMsg()
     setPhase('speaking')
     void (async () => {
       await speak(step.say)
