@@ -178,9 +178,11 @@ export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | n
             {m.mine && <button className="btn danger small" onClick={() => { if (confirm('למחוק את השיר?')) persist(custom.filter((c) => c.id !== m.id)) }}>🗑</button>}
           </div>
         ))}
-        <button className="btn primary big" onClick={() => setImporting(true)}>📁 ייבא שיר מקובץ (MIDI / KAR)</button>
         <button className="btn primary big" onClick={() => void fromClipboard()}>📋 הדבק שיר שהעתקת מדף טאבים</button>
-        <button className="btn big" onClick={() => setPageHelp(true)}>🔖 הוסף שיר מדף טאבים (סימנייה)</button>
+        <button className="btn big" onClick={() => setImporting(true)}>📁 ייבא שיר מקובץ (MIDI / KAR)</button>
+        {!window.matchMedia('(pointer: coarse)').matches && (
+          <button className="btn big" onClick={() => setPageHelp(true)}>🔖 הוסף שיר מדף טאבים (סימנייה למחשב)</button>
+        )}
         <button className="btn big" onClick={() => setAdding(true)}>➕ הוסף שיר ידנית</button>
       </div>
     )
