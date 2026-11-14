@@ -13,6 +13,7 @@ export function NoteMeter({ frame }: { frame: MicFrame | null }) {
       <div className="big">{note} <small>({hebrewName(note)})</small></div>
       <div className="sub">{holeLabel(note)} · {stable ? 'צליל יציב' : 'לא יציב, נסה להחזיק'}</div>
       <div className="bar"><i style={{ left: `${pos}%` }} /></div>
+      <div className="sub tiny">ביטחון {Math.round(frame.confidence * 100)}% · עוצמה {(frame.rms * 1000).toFixed(0)}</div>
       <div className="sub">{cents === 0 ? 'מדויק' : cents > 0 ? `גבוה ב-${cents} סנט` : `נמוך ב-${-cents} סנט`}</div>
     </div>
   )

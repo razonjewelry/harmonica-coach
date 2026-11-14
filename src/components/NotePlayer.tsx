@@ -5,10 +5,11 @@ import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
 import { NoteMeter } from './NoteMeter'
+import { Karaoke } from './Karaoke'
 import { hebrewName } from '../lessons/data'
 
 /** מאזין לרצף צלילים דרך המיקרופון ומציג מה לנגן עכשיו. משמש לתרגול ולמנגינות. */
-export function NotePlayer({ notes, onDone }: { notes: string[]; onDone?: () => void }) {
+export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?: string[]; onDone?: () => void }) {
   const matcher = useRef(new SequenceMatcher(notes))
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
@@ -30,9 +31,13 @@ export function NotePlayer({ notes, onDone }: { notes: string[]; onDone?: () => 
   return (
     <div className="card">
       <MicBar status={mic.status} onStart={() => void mic.start()} />
-      <div className="dots" dir="ltr">
-        {notes.map((n, i) => <span key={i} className={i < index ? 'dot done' : i === index ? 'dot cur' : 'dot'} title={n} />)}
-      </div>
+      {lyrics ? (
+        <Karaoke lyrics={lyrics} notes={notes} index={index} />
+      ) : (
+        <div className="dots" dir="ltr">
+          {notes.map((n, i) => <span key={i} className={i < index ? 'dot done' : i === index ? 'dot cur' : 'dot'} title={n} />)}
+        </div>
+      )}
       {finished ? (
         <div className="success">
           <h2>סיימת!</h2>

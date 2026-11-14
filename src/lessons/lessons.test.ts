@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { SequenceMatcher } from './sequence'
 import { LESSONS } from './data'
-import { MELODIES } from './melodies'
+import { MELODIES, parseLyrics } from './melodies'
 import { emptyProgress, markCompleted, markStep, loadProgress, saveProgress } from './progress'
 import { findHole } from '../harmonica/notes'
 
@@ -57,6 +57,21 @@ describe('נתוני שיעורים', () => {
     }
     for (const mel of MELODIES) notes.push(...mel.notes)
     for (const n of notes) expect(findHole(n).length, n).toBeGreaterThan(0)
+  })
+})
+
+describe('קריוקי: מילים מול צלילים', () => {
+  it('מספר ההברות שווה למספר הצלילים בכל מנגינה', () => {
+    for (const mel of MELODIES) {
+      if (!mel.lyrics) continue
+      const total = parseLyrics(mel.lyrics).flat().length
+      expect(total, mel.title).toBe(mel.notes.length)
+    }
+  })
+  it('המילים ממוספרות ברצף', () => {
+    const flat = parseLyrics(['א-ב ג', 'ד']).flat()
+    expect(flat.map((s) => s.index)).toEqual([0, 1, 2, 3])
+    expect(flat.map((s) => s.wordEnd)).toEqual([false, true, true, true])
   })
 })
 

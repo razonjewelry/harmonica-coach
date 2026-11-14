@@ -98,7 +98,7 @@ function Melodies() {
   return (
     <>
       <h2 className="pad">{mel.title}</h2>
-      <NotePlayer key={mel.id} notes={mel.notes} />
+      <NotePlayer key={mel.id} notes={mel.notes} lyrics={mel.lyrics} />
       <div className="row"><button className="btn" onClick={() => setId(null)}>חזרה לרשימה</button></div>
     </>
   )

@@ -51,7 +51,7 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean) {
     setStatus('starting')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
       })
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       const ctx = new Ctx()
@@ -71,7 +71,7 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean) {
         const stable = trackerRef.current.push(r)
         const raw = r.freq !== null && r.confidence >= 0.6 ? matchNote(r.freq) : null
         frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms })
-      }, 50)
+      }, 40)
       setStatus('on')
     } catch (e) {
       const name = (e as DOMException).name
