@@ -3,7 +3,7 @@ import { noteToFreq } from '../harmonica/notes'
 let ctx: AudioContext | null = null
 let bus: { input: GainNode } | null = null
 
-function getCtx(): AudioContext {
+export function getCtx(): AudioContext {
   const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
   ctx = ctx ?? new Ctx()
   void ctx.resume()
@@ -11,7 +11,7 @@ function getCtx(): AudioContext {
 }
 
 /** מסלול שמע משותף: הד קל של חדר + דחיסה עדינה, כדי שהצליל יישמע טבעי ולא יבש */
-function getBus(ac: AudioContext): GainNode {
+export function getBus(ac: AudioContext): GainNode {
   if (bus) return bus.input
   const input = ac.createGain()
   const comp = ac.createDynamicsCompressor()

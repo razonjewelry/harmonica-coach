@@ -8,6 +8,7 @@ export type Step =
   | { kind: 'check'; notes: string[]; say: string }
   | { kind: 'hold'; note: string; seconds: number; say: string }
   | { kind: 'echo'; notes: string[]; say: string }
+  | { kind: 'jam'; style: string; seconds: number; say: string }
   | { kind: 'summary'; say: string }
 
 export interface Lesson {
@@ -20,7 +21,7 @@ export interface Lesson {
 
 export const LESSONS: Lesson[] = COURSE
 
-export const TOTAL_LESSONS = 24
+export const TOTAL_LESSONS = 30
 
 export const noteHebrew: Record<string, string> = { C: 'דו', D: 'רה', E: 'מי', F: 'פה', G: 'סול', A: 'לה', B: 'סי' }
 export const hebrewName = (note: string) => noteHebrew[note.replace(/\d/, '')] ?? note

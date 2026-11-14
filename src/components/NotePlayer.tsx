@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useMic } from '../audio/useMic'
 import type { MicFrame } from '../audio/useMic'
 import { playMelody, stopPlayback } from '../audio/tone'
+import { autoChords, startBacking } from '../audio/backing'
+import type { Backing } from '../audio/backing'
 import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
@@ -23,6 +25,8 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone, o
   const previewRun = useRef(0)
   const [speed, setSpeed] = useState(1)
   const [tapping, setTapping] = useState(false)
+  const [withBand, setWithBand] = useState(true)
+  const band = useRef<Backing | null>(null)
   const autoBeats = beats ?? (phrases ? phrases.flatMap((c) => Array.from({ length: c }, (_, k) => (k === c - 1 ? 2 : 1))) : undefined)
   const playBpm = beats ? bpm : Math.min(bpm, 90)
 
@@ -42,15 +46,19 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone, o
     () => matcher.current.target,
   )
 
-  useEffect(() => () => { previewRun.current++; stopPlayback() }, [])
+  useEffect(() => () => { previewRun.current++; stopPlayback(); band.current?.stop() }, [])
 
   const restart = () => { matcher.current = new SequenceMatcher(notes); setIndex(0); clearMsg(); setFinished(false) }
-  const stopPreview = () => { previewRun.current++; stopPlayback(); setPreviewIdx(null) }
+  const stopPreview = () => { previewRun.current++; stopPlayback(); band.current?.stop(); band.current = null; setPreviewIdx(null) }
   const preview = async () => {
     const my = ++previewRun.current
     setPreviewIdx(0)
     const h = playMelody(notes, autoBeats, playBpm * speed, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
+    // ליווי: אקורדים שנבחרים לפי המנגינה, באותו קצב
+    if (withBand) band.current = startBacking(autoChords(notes, autoBeats), playBpm * speed, { volume: 0.55 })
     await h.done
+    band.current?.stop()
+    band.current = null
     if (previewRun.current === my) setPreviewIdx(null)
   }
 
@@ -100,6 +108,7 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone, o
           ? <button className="btn" onClick={() => void preview()}>🔊 שמע איך זה הולך</button>
           : <button className="btn" onClick={stopPreview}>⏹ עצור הדגמה</button>}
         {onRhythm && previewIdx === null && <button className="btn" onClick={() => { stopPlayback(); setTapping(true) }}>🥁 הקש קצב</button>}
+        <button className={`btn chipbtn${withBand ? ' on' : ''}`} onClick={() => setWithBand(!withBand)} disabled={previewIdx !== null}>🎸 ליווי</button>
         <div className="speed" role="group" aria-label="מהירות ההדגמה">
           {[0.5, 0.75, 1].map((s) => (
             <button key={s} className={`btn chipbtn${speed === s ? ' on' : ''}`} onClick={() => setSpeed(s)}>{s === 1 ? 'רגיל' : `${Math.round(s * 100)}%`}</button>

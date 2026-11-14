@@ -10,6 +10,7 @@ import { LessonRunner } from './components/LessonRunner'
 import { NotePlayer } from './components/NotePlayer'
 import { HarmonicaView } from './components/HarmonicaView'
 import { MicBar } from './components/MicBar'
+import { JamRoom } from './components/JamRoom'
 import { NoteMeter } from './components/NoteMeter'
 import { useMic } from './audio/useMic'
 import type { MicFrame } from './audio/useMic'
@@ -58,6 +59,7 @@ function FreeCoach() {
 
 function Practice() {
   const [drill, setDrill] = useState<string | null>(null)
+  const [jamming, setJamming] = useState(false)
   const [round, setRound] = useState(0)
   const notes = useMemo(() => {
     const d = DRILLS.find((x) => x.id === drill)
@@ -65,9 +67,11 @@ function Practice() {
     return d.id === 'scale' ? [...d.notes, ...[...d.notes].reverse().slice(1)] : shuffled(d.notes, 8)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drill, round])
+  if (jamming) return <JamRoom onBack={() => setJamming(false)} />
   if (!drill) {
     return (
       <div className="card">
+        <button className="btn primary big" onClick={() => setJamming(true)}>🎸 חדר ג׳אם: נגן עם ליווי</button>
         <h2>חדר תרגול</h2>
         <p className="sub">בחר תרגיל. האפליקציה אומרת מה לנגן ובודקת בעזרת המיקרופון.</p>
         {DRILLS.map((d) => <button key={d.id} className="btn list" onClick={() => setDrill(d.id)}>{d.label}</button>)}

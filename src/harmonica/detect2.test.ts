@@ -77,3 +77,16 @@ describe('טאבים לפי פסוקיות', () => {
     expect(parseTab('4+ 4+\n\n6+').phrases).toEqual([2, 1])
   })
 })
+
+describe('ליווי אוטומטי', () => {
+  it('בוחר אקורדים לפי המנגינה ומסיים בדו', async () => {
+    const { autoChords } = await import('../audio/backing')
+    // תיבה של סול-סי-רה-פה => G7, תיבה של פה-לה-דו-לה => F
+    const bars = autoChords(['G5', 'B5', 'D5', 'F5', 'F5', 'A5', 'C5', 'A5', 'E5', 'G5', 'C5', 'E5'])
+    expect(bars).toEqual(['G7', 'F', 'C'])
+  })
+  it('מספר התיבות לפי סכום הפעימות', async () => {
+    const { autoChords } = await import('../audio/backing')
+    expect(autoChords(['C5', 'D5'], [4, 4]).length).toBe(2)
+  })
+})

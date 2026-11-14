@@ -5,6 +5,8 @@ import { SequenceMatcher } from '../lessons/sequence'
 import { useMic } from '../audio/useMic'
 import type { MicFrame } from '../audio/useMic'
 import { playTone, playMelody } from '../audio/tone'
+import { STYLES, startBacking } from '../audio/backing'
+import type { Backing } from '../audio/backing'
 import { speak, stopSpeaking, voiceEnabled, getHebrewVoice } from '../harmonica/speech'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
@@ -33,12 +35,23 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   const matcher = useRef<SequenceMatcher | null>(null)
   const hold = useRef<{ note: string; ms: number; start: number | null } | null>(null)
   const [holdPct, setHoldPct] = useState(0)
+  const jam = useRef<{ start: number; ms: number; notes: Set<string>; backing: Backing } | null>(null)
+  const [jamInfo, setJamInfo] = useState({ sec: 0, notes: 0 })
   const run = useRef(0)
   const skips = useRef(0)
   const step = lesson.steps[stepIdx]
 
   const mic = useMic((f) => {
     setFrame(f)
+    const j = jam.current
+    if (j) {
+      // ג'אם: כל צליל נחשב. מצליחים אחרי הזמן, אם ניגנת לפחות 3 צלילים שונים
+      if (f.stable) j.notes.add(f.stable.note)
+      const el = performance.now() - j.start
+      setJamInfo({ sec: Math.floor(el / 1000), notes: j.notes.size })
+      if (el >= j.ms && j.notes.size >= 3) { j.backing.stop(); jam.current = null; setPhase('success') }
+      return
+    }
     const h = hold.current
     if (h) {
       // צליל ארוך: נמדד כל עוד הצליל המבוקש נשמע ברציפות
@@ -72,6 +85,9 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     matcher.current = null
     hold.current = null
     setHoldPct(0)
+    jam.current?.backing.stop()
+    jam.current = null
+    setJamInfo({ sec: 0, notes: 0 })
     setIndex(0)
     clearMsg()
     setPhase('speaking')
@@ -90,6 +106,10 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       if (step.kind === 'practice' || step.kind === 'check' || step.kind === 'echo') {
         matcher.current = new SequenceMatcher(stepNotes(step))
         setPhase('listening')
+      } else if (step.kind === 'jam') {
+        const s = STYLES.find((x) => x.id === step.style) ?? STYLES[0]
+        jam.current = { start: performance.now(), ms: step.seconds * 1000, notes: new Set(), backing: startBacking(s.bars, s.bpm, { loop: true, feel: s.feel }) }
+        setPhase('listening')
       } else if (step.kind === 'hold') {
         hold.current = { note: step.note, ms: step.seconds * 1000, start: null }
         setPhase('listening')
@@ -97,7 +117,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
         setPhase('ready')
       }
     })()
-    return () => { run.current++; stopSpeaking() }
+    return () => { run.current++; stopSpeaking(); jam.current?.backing.stop(); jam.current = null }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stepIdx, phase === 'gate'])
 
@@ -153,10 +173,10 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       <MicBar status={mic.status} onStart={() => void mic.start()} />
       {noVoice && <div className="warn">לא נמצא קול עברי במכשיר, לכן ההדרכה מוצגת בכתב בלבד. אפשר להתקין קול עברי בהגדרות הטקסט-לדיבור של המכשיר.</div>}
 
-      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : step.kind === 'hold' ? 'צליל ארוך' : step.kind === 'echo' ? '🎧 הד' : 'בדיקה'}</h3>
+      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : step.kind === 'hold' ? 'צליל ארוך' : step.kind === 'echo' ? '🎧 הד' : step.kind === 'jam' ? '🎸 ג׳אם' : 'בדיקה'}</h3>
       <p className="say">{step.say}</p>
 
-      {(step.kind === 'demo' || step.kind === 'hold' || notes.length > 0) && (
+      {(step.kind === 'demo' || step.kind === 'hold' || step.kind === 'jam' || notes.length > 0) && (
         <>
           {target && <div className="sub target-line">{target} ({hebrewName(target)}) · {holeLabel(target)}</div>}
           <HarmonicaView target={target} heard={phase === 'listening' ? frame?.stable?.note ?? null : null} />
@@ -172,7 +192,10 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       {step.kind === 'hold' && phase === 'listening' && (
         <div className="holdbar" aria-label="כמה זמן החזקת"><i style={{ width: `${Math.round(holdPct * 100)}%` }} /><span>{(holdPct * step.seconds).toFixed(1)} / {step.seconds} שניות</span></div>
       )}
-      {phase === 'listening' && <NoteMeter frame={frame} />}
+      {step.kind === 'jam' && phase === 'listening' && (
+        <div className="holdbar"><i style={{ width: `${Math.min(100, Math.round((jamInfo.sec / step.seconds) * 100))}%` }} /><span>{jamInfo.sec} / {step.seconds} שניות · {jamInfo.notes} צלילים שונים</span></div>
+      )}
+      {phase === 'listening' && step.kind !== 'jam' && <NoteMeter frame={frame} />}
       <div className="msg" aria-live="polite">{phase === 'speaking' ? 'המורה מדבר...' : phase === 'success' ? 'כל הכבוד! עוברים הלאה.' : msg}</div>
 
       <div className="row">

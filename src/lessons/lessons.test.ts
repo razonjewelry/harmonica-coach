@@ -42,12 +42,12 @@ describe('נתוני שיעורים', () => {
       const kinds = l.steps.map((s) => s.kind)
       expect(['explain', 'demo', 'check', 'echo']).toContain(kinds[0])
       expect(kinds[kinds.length - 1]).toBe('summary')
-      expect(kinds.some((k) => k === 'check' || k === 'hold' || k === 'echo')).toBe(true)
+      expect(kinds.some((k) => k === 'check' || k === 'hold' || k === 'echo' || k === 'jam')).toBe(true)
     }
   })
-  it('24 שיעורים עם מזהים ומספרים ייחודיים', () => {
-    expect(LESSONS.length).toBe(24)
-    expect(LESSONS.map((l) => l.number)).toEqual(Array.from({ length: 24 }, (_, i) => i + 1))
+  it('30 שיעורים עם מזהים ומספרים ייחודיים', () => {
+    expect(LESSONS.length).toBe(30)
+    expect(LESSONS.map((l) => l.number)).toEqual(Array.from({ length: 30 }, (_, i) => i + 1))
     expect(new Set(LESSONS.map((l) => l.id)).size).toBe(LESSONS.length)
   })
   it('כל התווים בשיעורים ובמנגינות קיימים במפוחית C', () => {
@@ -161,5 +161,13 @@ describe('כוכבים ורצף ימים', () => {
     expect(p.streak?.count).toBe(2)
     p = markCompleted(p, 'l4', new Date(2026, 10, 17))
     expect(p.streak?.count).toBe(1)
+  })
+})
+
+
+describe('סגנונות הג׳אם בשיעורים', () => {
+  it('כל שלב ג׳אם מפנה לסגנון קיים', async () => {
+    const { STYLES } = await import('../audio/backing')
+    for (const l of LESSONS) for (const st of l.steps) if (st.kind === 'jam') expect(STYLES.map((x) => x.id), l.title).toContain(st.style)
   })
 })
