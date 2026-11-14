@@ -1,4 +1,4 @@
-import { LAYOUT, findHole } from '../harmonica/notes'
+import { LAYOUT, findHole, noteToMidi } from '../harmonica/notes'
 
 interface Props {
   /** הצליל הנדרש: מסומן בחור המתאים */
@@ -29,8 +29,22 @@ export function HarmonicaView({ target, heard }: Props) {
   )
 }
 
+const ACT = { blow: 'נשיפה', draw: 'שאיפה' } as const
+
+/** אם הצליל לא קיים במפוחית, בודק אם זה כנראה כיפוף (חצי טון או טון מתחת לצליל רגיל) */
+export function bendHint(note: string): string {
+  const m = noteToMidi(note)
+  for (const h of Object.keys(LAYOUT).map(Number))
+    for (const a of ['draw', 'blow'] as const) {
+      const d = noteToMidi(LAYOUT[h][a]) - m
+      if (d === 1 || d === 2) return `לא צליל רגיל במפוחית. אולי כיפוף של חור ${h} ${ACT[a]}. נסה בעדינות, בלי לחץ`
+    }
+  return 'צליל שלא קיים במפוחית'
+}
+
 export function holeLabel(note: string): string {
-  const f = findHole(note)[0]
-  if (!f) return note
-  return `חור ${f.hole}, ${f.action === 'blow' ? 'נשיפה' : 'שאיפה'}`
+  const fs = findHole(note)
+  if (!fs.length) return bendHint(note)
+  const txt = fs.map((f) => `חור ${f.hole} ${ACT[f.action]}`).join(' או ')
+  return fs.length > 1 ? `${txt} (אותו צליל)` : txt
 }

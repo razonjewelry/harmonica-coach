@@ -104,7 +104,7 @@ export function targetPeriodicity(buf: Float32Array, sampleRate: number, targetF
   const den = a + c - 2 * b
   const tauRef = best + (den === 0 ? 0 : (a - c) / (2 * den))
   const cents = 1200 * Math.log2(sampleRate / tauRef / targetFreq)
-  if (Math.abs(cents) > 40) return 0
+  if (Math.abs(cents) > 47) return 0
   // אם האות מחזורי גם בחצי מחזור, הצליל בעצם גבוה יותר
   let upper = 1
   for (let t = Math.max(2, Math.floor(tauT * 0.45)); t <= Math.ceil(tauT * 0.55); t++) upper = Math.min(upper, cm[t])
@@ -128,7 +128,7 @@ export class StabilityTracker {
   private need: number
   private minConf: number
   private maxCents: number
-  constructor(need = 3, minConf = 0.5, maxCents = 45, size = 6) {
+  constructor(need = 3, minConf = 0.5, maxCents = 47, size = 6) {
     this.need = need
     this.minConf = minConf
     this.maxCents = maxCents
