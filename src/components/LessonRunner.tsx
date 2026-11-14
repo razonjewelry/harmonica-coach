@@ -39,7 +39,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     const m = matcher.current
     if (!m || m.done) return
     const t = m.target
-    const e = m.push(f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null), f.onset)
+    const e = m.push(f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null), f.onset, f.sounding)
     if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
     if (e.wrong && m.target) flash(`שמעתי ${e.wrong}. צריך ${m.target}.`, 2500)
     if (e.done) setPhase('success')

@@ -160,24 +160,45 @@ export class StabilityTracker {
 export class OnsetDetector {
   private h: number[] = []
   private cool = 0
+  private look: number
+  private tail: number
+  private coolLen: number
+  /** ברירת מחדל: ערך לכל פריים (40ms). לדיוק גבוה יותר: new OnsetDetector(8, 4, 6) עם בלוקים של 20ms */
+  constructor(look = 6, tail = 3, coolLen = 5) {
+    this.look = look
+    this.tail = tail
+    this.coolLen = coolLen
+  }
   push(rms: number): boolean {
     const n = this.h.length
     let onset = false
-    if (n >= 6 && this.cool === 0) {
-      const prev = this.h.slice(n - 6)
+    if (n >= this.look && this.cool === 0) {
+      const prev = this.h.slice(n - this.look)
       const prevMax = Math.max(...prev)
       const iMax = prev.indexOf(prevMax)
       const after = prev.slice(iMax + 1)
-      const prevMin = after.length ? Math.min(...after.slice(-3)) : prevMax
-      onset = after.length > 0 && prevMax > 0.004 && prevMin < 0.55 * prevMax && rms > 1.5 * prevMin && rms >= 0.7 * prevMax
-      if (onset) this.cool = 5
+      const prevMin = after.length ? Math.min(...after.slice(-this.tail)) : prevMax
+      onset = after.length > 0 && prevMax > 0.004 && prevMin < 0.72 * prevMax && rms > 1.3 * prevMin && rms >= 0.75 * prevMax
+      if (onset) this.cool = this.coolLen
     }
     if (this.cool > 0 && !onset) this.cool--
     this.h.push(rms)
-    if (this.h.length > 8) this.h.shift()
+    if (this.h.length > this.look + 2) this.h.shift()
     return onset
   }
   reset() { this.h = []; this.cool = 0 }
+}
+
+/** עוצמה (RMS) של הבלוקים האחרונים בחלון: רזולוציית זמן עדינה (20ms) לזיהוי ירידה קטנה בין צלילים */
+export function blockRms(buf: Float32Array, blocks = 2, size = 960): number[] {
+  const out: number[] = []
+  for (let b = blocks - 1; b >= 0; b--) {
+    const end = buf.length - b * size
+    let s = 0
+    for (let i = end - size; i < end; i++) s += buf[i] * buf[i]
+    out.push(Math.sqrt(s / size))
+  }
+  return out
 }
 
 /** הצבעת רוב לגבי "הצליל המבוקש נשמע": 3 פריימים מתוך 6 עם מחזוריות של לפחות 75% */

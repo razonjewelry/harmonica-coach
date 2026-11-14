@@ -26,7 +26,7 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
       const t = matcher.current.target
       // צליל מזוהה כללי, או אימות מחזוריות של הצליל המבוקש (לצלילים נשימתיים)
       const eff = f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null)
-      const e = matcher.current.push(eff, f.onset)
+      const e = matcher.current.push(eff, f.onset, f.sounding)
       if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
       if (e.wrong && matcher.current.target) flash(`שמעתי ${e.wrong}. צריך ${matcher.current.target}.`, 2500)
       if (e.done && !finished) { setFinished(true); onDone?.() }

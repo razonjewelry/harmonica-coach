@@ -39,15 +39,17 @@ export class SequenceMatcher {
   }
 
   /** onset = תחילת צליל חדש לפי העוצמה (מאפשר לחזור על אותו צליל בלי שקט מלא) */
-  push(m: NoteMatch | null, onset = false): SeqEvent {
+  push(m: NoteMatch | null, onset = false, sounding: boolean = m !== null): SeqEvent {
     const idle = { index: this.i, done: this.done, advanced: false, wrong: null as string | null }
     if (this.done) return idle
-    if (m === null) {
+    // שקט נספר לפי מה שנשמע ברגע זה (לא לפי הזיכרון של מנגנון היציבות), כדי שחזרה על אותו צליל תזוהה
+    if (!sounding) {
       this.silent++
       if (this.silent >= this.releaseFrames) { this.released = true; this.lastWrong = null }
-      return { ...idle }
+    } else {
+      this.silent = 0
     }
-    this.silent = 0
+    if (m === null) return idle
     if (onset) this.released = true
     if (m.note === this.targets[this.i]) {
       // אותו צליל כמו הקודם דורש הפסקה או תחילת צליל חדש; צליל שונה נספר מיד

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { bandpass, detectPitchFiltered, StabilityTracker, OnsetDetector, TargetVote, targetPeriodicity } from '../harmonica/pitch'
+import { blockRms, bandpass, detectPitchFiltered, StabilityTracker, OnsetDetector, TargetVote, targetPeriodicity } from '../harmonica/pitch'
 import { noteToFreq } from '../harmonica/notes'
 import type { NoteMatch, PitchResult } from '../harmonica/pitch'
 import { matchNote } from '../harmonica/pitch'
@@ -17,6 +17,8 @@ export interface MicFrame {
   onset: boolean
   /** הצליל המבוקש אומת במחזוריות (לא תלוי בזיהוי הכללי) */
   targetHit: boolean
+  /** יש צליל מחזורי ברגע זה (בלי זיכרון) */
+  sounding: boolean
 }
 
 export const MIC_MESSAGES: Record<MicStatus, string> = {
@@ -37,7 +39,7 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean, getTarge
   const frameRef = useRef(onFrame)
   const pausedRef = useRef(paused)
   const trackerRef = useRef(new StabilityTracker())
-  const onsetRef = useRef(new OnsetDetector())
+  const onsetRef = useRef(new OnsetDetector(8, 4, 6))
   const voteRef = useRef(new TargetVote())
   const targetFnRef = useRef(getTarget)
   targetFnRef.current = getTarget
@@ -84,7 +86,7 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean, getTarge
         const targetHit = tgt ? voteRef.current.push(tgt, targetPeriodicity(filtered, ctx.sampleRate, noteToFreq(tgt))) : voteRef.current.push(null, 0)
         const stable = trackerRef.current.push(r)
         const raw = r.freq !== null && r.confidence >= 0.6 ? matchNote(r.freq) : null
-        frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms, onset: onsetRef.current.push(r.rms), targetHit })
+        frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms, onset: blockRms(filtered).map((v) => onsetRef.current.push(v)).some(Boolean), targetHit, sounding: r.freq !== null && r.confidence >= 0.5 })
       }, 40)
       setStatus('on')
     } catch (e) {
