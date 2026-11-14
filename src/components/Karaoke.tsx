@@ -10,11 +10,16 @@ function tag(note: string): string {
  * קריוקי למפוחית: כל הברה מוצגת עם החור והכיוון שלה (↑ נשיפה, ↓ שאיפה).
  * ההברה הנוכחית מודגשת, מה שכבר נוגן מסומן, והבא בתור מעומעם.
  */
-export function Karaoke({ lyrics, notes, index }: { lyrics: string[]; notes: string[]; index: number }) {
+export function Karaoke({ lyrics, notes, index, compact }: { lyrics: string[]; notes: string[]; index: number; compact?: boolean }) {
   const lines = parseLyrics(lyrics)
+  // במצב קומפקטי מציגים רק את השורה הנוכחית והבאה, כדי שהמפוחית תישאר בתצוגה
+  let cur = lines.findIndex((l) => l.some((x) => x.index === index))
+  if (cur < 0) cur = lines.length - 1
+  const visible = compact ? lines.map((l, i) => ({ l, i })).filter(({ i }) => i === cur || i === cur + 1) : lines.map((l, i) => ({ l, i }))
   return (
     <div className="karaoke" dir="rtl" aria-label="מילים לקריוקי">
-      {lines.map((line, li) => {
+      {compact && <div className="sub tiny">שורה {cur + 1} מתוך {lines.length}</div>}
+      {visible.map(({ l: line, i: li }) => {
         const active = line.some((s) => s.index === index)
         const past = line.every((s) => s.index < index)
         return (

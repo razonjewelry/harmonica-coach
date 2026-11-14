@@ -5,7 +5,6 @@ import { playSequence } from '../audio/tone'
 import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
-import { NoteMeter } from './NoteMeter'
 import { Karaoke } from './Karaoke'
 import { hebrewName } from '../lessons/data'
 import { useFlash } from './useFlash'
@@ -50,43 +49,53 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
   const target = matcher.current.target
   const shownIndex = previewIdx ?? index
 
+  const shownTarget = previewIdx !== null ? notes[previewIdx] : finished ? null : target
+  const heardNote = frame?.raw?.note ?? null
+  const heardStable = !!frame?.stable && frame.stable.note === heardNote
+
   return (
     <div className="card">
+      <div className="sticky">
+        <div className="tline">
+          {shownTarget ? (
+            <>
+              <b>{shownTarget}</b> <span>({hebrewName(shownTarget)})</span> <span className="sub">{holeLabel(shownTarget)}</span>
+            </>
+          ) : <b>סיימת!</b>}
+          {previewIdx === null && (
+            <span className={`chip ${heardStable ? 'ok' : ''}`}>{heardNote ? `שמעתי ${heardNote}` : 'מחכה לצליל'}</span>
+          )}
+        </div>
+        <HarmonicaView target={shownTarget} heard={previewIdx === null ? frame?.stable?.note ?? null : null} />
+      </div>
       <MicBar status={mic.status} onStart={() => void mic.start()} />
       {lyrics ? (
-        <Karaoke lyrics={lyrics} notes={notes} index={shownIndex} />
+        <Karaoke lyrics={lyrics} notes={notes} index={shownIndex} compact />
       ) : (
         <div className="dots" dir="ltr">
           {notes.map((n, i) => <span key={i} className={i < shownIndex ? 'dot done' : i === shownIndex ? 'dot cur' : 'dot'} title={n} />)}
+        </div>
+      )}
+      <div className="msg" aria-live="polite">
+        {previewIdx !== null ? 'מנגן הדגמה... (המיקרופון מושהה)' : msg}
+      </div>
+      {finished && previewIdx === null && (
+        <div className="success">
+          <h2>סיימת!</h2>
+          <button className="btn primary" onClick={restart}>עוד פעם</button>
         </div>
       )}
       <div className="row">
         {previewIdx === null
           ? <button className="btn" onClick={() => void preview()}>🔊 שמע איך זה הולך</button>
           : <button className="btn" onClick={stopPreview}>⏹ עצור הדגמה</button>}
-      </div>
-      {previewIdx !== null ? (
-        <div className="msg">מנגן הדגמה... (המיקרופון מושהה)</div>
-      ) : finished ? (
-        <div className="success">
-          <h2>סיימת!</h2>
-          <button className="btn primary" onClick={restart}>עוד פעם</button>
-        </div>
-      ) : (
-        <>
-          <div className="target">
-            <div className="big">{target} <small>({target ? hebrewName(target) : ''})</small></div>
-            <div className="sub">{target ? holeLabel(target) : ''}</div>
-          </div>
-          <HarmonicaView target={target} heard={frame?.stable?.note ?? null} />
-          <NoteMeter frame={frame} />
-          <div className="msg" aria-live="polite">{msg}</div>
-          <div className="row">
-            <button className="btn" onClick={restart}>התחל מהתחלה</button>
+        {!finished && previewIdx === null && (
+          <>
             <button className="btn" onClick={() => { const m = matcher.current; m.skip(); setIndex(m.index); flash('דילגת על הצליל', 1200) }}>דלג על הצליל</button>
-          </div>
-        </>
-      )}
+            <button className="btn" onClick={restart}>התחל מהתחלה</button>
+          </>
+        )}
+      </div>
     </div>
   )
 }
