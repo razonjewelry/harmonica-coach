@@ -100,6 +100,7 @@ function Settings({ onReset }: { onReset: () => void }) {
       </p>
       <button className="btn" onClick={() => void speak('שלום, אני המורה שלך למפוחית. אפשר להתחיל ללמוד.')}>בדיקת קול</button>
       <hr />
+      <p className="sub">גרסה: {new Date(__BUILD__).toLocaleString('he-IL')}</p>
       <button className="btn danger" onClick={() => { if (confirm('למחוק את כל ההתקדמות?')) onReset() }}>איפוס התקדמות</button>
     </div>
   )

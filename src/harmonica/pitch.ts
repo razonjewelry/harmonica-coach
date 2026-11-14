@@ -178,7 +178,7 @@ export class OnsetDetector {
       const iMax = prev.indexOf(prevMax)
       const after = prev.slice(iMax + 1)
       const prevMin = after.length ? Math.min(...after.slice(-this.tail)) : prevMax
-      onset = after.length > 0 && prevMax > 0.004 && prevMin < 0.72 * prevMax && rms > 1.3 * prevMin && rms >= 0.75 * prevMax
+      onset = after.length > 0 && prevMax > 0.004 && prevMin < 0.6 * prevMax && rms > 1.4 * prevMin && rms >= 0.75 * prevMax
       if (onset) this.cool = this.coolLen
     }
     if (this.cool > 0 && !onset) this.cool--

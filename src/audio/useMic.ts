@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { blockRms, bandpass, detectPitchFiltered, StabilityTracker, OnsetDetector, TargetVote, targetPeriodicity } from '../harmonica/pitch'
 import { noteToFreq } from '../harmonica/notes'
+import { targetSpectral } from '../harmonica/spectrum'
 import type { NoteMatch, PitchResult } from '../harmonica/pitch'
 import { matchNote } from '../harmonica/pitch'
 
@@ -83,7 +84,7 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean, getTarge
         const filtered = bandpass(buf, ctx.sampleRate)
         const r: PitchResult = detectPitchFiltered(filtered, ctx.sampleRate)
         const tgt = targetFnRef.current?.() ?? null
-        const targetHit = tgt ? voteRef.current.push(tgt, targetPeriodicity(filtered, ctx.sampleRate, noteToFreq(tgt))) : voteRef.current.push(null, 0)
+        const targetHit = tgt ? voteRef.current.push(tgt, Math.max(targetPeriodicity(filtered, ctx.sampleRate, noteToFreq(tgt)), targetSpectral(filtered, ctx.sampleRate, noteToFreq(tgt)) ? 0.9 : 0)) : voteRef.current.push(null, 0)
         const stable = trackerRef.current.push(r)
         const raw = r.freq !== null && r.confidence >= 0.6 ? matchNote(r.freq) : null
         frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms, onset: blockRms(filtered).map((v) => onsetRef.current.push(v)).some(Boolean), targetHit, sounding: r.freq !== null && r.confidence >= 0.5 })

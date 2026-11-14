@@ -49,7 +49,8 @@ export class SequenceMatcher {
     } else {
       this.silent = 0
     }
-    if (m === null) return idle
+    // זנב הצליל: זיכרון היציבות עדיין מחזיק את הצליל הקודם אחרי שהוא נגמר. בלי צליל חי לא מתקדמים.
+    if (!sounding || m === null) return idle
     if (onset) this.released = true
     if (m.note === this.targets[this.i]) {
       // אותו צליל כמו הקודם דורש הפסקה או תחילת צליל חדש; צליל שונה נספר מיד

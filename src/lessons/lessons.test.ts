@@ -116,3 +116,15 @@ describe('קצב השירים', () => {
     for (const mel of MELODIES) if (mel.beats) expect(mel.beats.length, mel.title).toBe(mel.notes.length)
   })
 })
+
+describe('זנב הצליל', () => {
+  it('אחרי שהצליל נגמר, זיכרון היציבות לא מקדם לצליל החוזר הבא', () => {
+    const s = new SequenceMatcher(['G5', 'G5'])
+    s.push(m('G5'), false, true)
+    // הצליל נפסק אבל מנגנון היציבות עדיין מחזיר G5 כמה פריימים
+    for (let i = 0; i < 4; i++) expect(s.push(m('G5'), false, false).advanced).toBe(false)
+    expect(s.index).toBe(1)
+    // רק צליל חי חדש מקדם
+    expect(s.push(m('G5'), false, true).advanced).toBe(true)
+  })
+})
