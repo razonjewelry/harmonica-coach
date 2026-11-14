@@ -6,6 +6,7 @@ import { NotePlayer } from './NotePlayer'
 import { parseMidi, buildSong, guessMelodyTrack } from '../lessons/midi'
 import type { ParsedMidi, BuiltSong } from '../lessons/midi'
 import { playMelody, stopPlayback } from '../audio/tone'
+import { findHole } from '../harmonica/notes'
 
 function SongForm({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onCancel: () => void }) {
   const [title, setTitle] = useState('')
@@ -97,6 +98,14 @@ function ImportSong({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onC
                 {built.shift !== 0 ? ` · הוזז ${built.shift > 0 ? '+' : ''}${built.shift} חצאי טונים` : ''}
                 {built.lyrics ? ` · ${built.lyrics.length} שורות מילים` : ' · בלי מילים בקובץ'}
               </div>
+              <div className="lholes" dir="ltr" aria-label="תחילת השיר בטאבים">
+                {built.notes.slice(0, 16).map((n, i) => {
+                  const f = findHole(n)[0]
+                  return <span key={i} className="hc">{f ? `${f.hole}${f.action === 'blow' ? '↑' : '↓'}` : n}</span>
+                })}
+                {built.notes.length > 16 && <span className="sub">…</span>}
+              </div>
+              {built.notes.length > 1200 && <div className="warn">הרצועה ארוכה מאוד ({built.notes.length} צלילים). כנראה זה ליווי ולא מנגינה. נסה רצועה אחרת.</div>}
               {built.exactPct < 70 && <div className="warn">רק {built.exactPct}% מהצלילים קיימים במפוחית C, אז השיר יישמע שונה. אפשר לנסות רצועה אחרת.</div>}
               <div className="row">
                 <button className="btn" onClick={preview}>{playing ? '⏹ עצור' : '🔊 שמע'}</button>

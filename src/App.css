@@ -88,3 +88,7 @@ hr { border: 0; border-top: 1px solid var(--panel2); margin: 16px 0; }
 .hc.cur { background: var(--warn); color: #2a1d00; font-weight: 800; transform: scale(1.1); }
 
 select, input[type=file] { display: block; width: 100%; margin-top: 6px; padding: 12px; font-size: 16px; border-radius: 12px; border: 1px solid var(--panel2); background: #0d1d38; color: var(--text); font-family: inherit; }
+
+.speed { display: flex; gap: 6px; flex: 1; min-width: 200px; }
+.chipbtn { flex: 1; margin: 0; padding: 8px; font-size: 15px; }
+.chipbtn.on { background: var(--teal); color: #06222a; font-weight: 700; }

@@ -7,6 +7,7 @@ import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
 import { Karaoke } from './Karaoke'
 import { LineKaraoke } from './LineKaraoke'
+import { autoPhrases } from '../lessons/melodies'
 import { hebrewName } from '../lessons/data'
 import { useFlash } from './useFlash'
 
@@ -19,6 +20,7 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
   const [finished, setFinished] = useState(false)
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const previewRun = useRef(0)
+  const [speed, setSpeed] = useState(1)
 
   const mic = useMic(
     (f) => {
@@ -43,7 +45,7 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
   const preview = async () => {
     const my = ++previewRun.current
     setPreviewIdx(0)
-    const h = playMelody(notes, beats, bpm, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
+    const h = playMelody(notes, beats, bpm * speed, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
     await h.done
     if (previewRun.current === my) setPreviewIdx(null)
   }
@@ -71,14 +73,10 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
         <HarmonicaView target={shownTarget} heard={previewIdx === null ? frame?.stable?.note ?? null : null} />
       </div>
       <MicBar status={mic.status} onStart={() => void mic.start()} />
-      {lyrics && phrases ? (
-        <LineKaraoke lyrics={lyrics} phrases={phrases} notes={notes} index={shownIndex} />
-      ) : lyrics ? (
+      {lyrics && !phrases ? (
         <Karaoke lyrics={lyrics} notes={notes} index={shownIndex} compact />
       ) : (
-        <div className="dots" dir="ltr">
-          {notes.map((n, i) => <span key={i} className={i < shownIndex ? 'dot done' : i === shownIndex ? 'dot cur' : 'dot'} title={n} />)}
-        </div>
+        <LineKaraoke lyrics={lyrics ?? []} phrases={phrases ?? autoPhrases(notes, beats)} notes={notes} index={shownIndex} />
       )}
       <div className="msg" aria-live="polite">
         {previewIdx !== null ? 'מנגן הדגמה... (המיקרופון מושהה)' : msg}
@@ -93,6 +91,11 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
         {previewIdx === null
           ? <button className="btn" onClick={() => void preview()}>🔊 שמע איך זה הולך</button>
           : <button className="btn" onClick={stopPreview}>⏹ עצור הדגמה</button>}
+        <div className="speed" role="group" aria-label="מהירות ההדגמה">
+          {[0.5, 0.75, 1].map((s) => (
+            <button key={s} className={`btn chipbtn${speed === s ? ' on' : ''}`} onClick={() => setSpeed(s)}>{s === 1 ? 'רגיל' : `${Math.round(s * 100)}%`}</button>
+          ))}
+        </div>
         {!finished && previewIdx === null && (
           <>
             <button className="btn" onClick={() => { const m = matcher.current; m.skip(); setIndex(m.index); flash('דילגת על הצליל', 1200) }}>דלג על הצליל</button>

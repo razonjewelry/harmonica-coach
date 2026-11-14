@@ -21,7 +21,7 @@ export function LineKaraoke({ lyrics, phrases, notes, index }: { lyrics: string[
       <div className="sub tiny">שורה {cur + 1} מתוך {phrases.length}</div>
       {show.map((i) => (
         <div key={i} className={`kline lyric${i === cur ? ' active' : ''}`}>
-          <div className="ltext">{lyrics[i] ?? ''}</div>
+          {lyrics[i] ? <div className="ltext">{lyrics[i]}</div> : null}
           <div className="lholes" dir="ltr">
             {Array.from({ length: phrases[i] }, (_, k) => {
               const n = starts[i] + k

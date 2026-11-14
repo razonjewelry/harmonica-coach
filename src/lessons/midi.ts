@@ -95,16 +95,25 @@ export function monophonic(notes: MidiNote[]): MidiNote[] {
   return out
 }
 
-/** בוחר ברירת מחדל: הרצועה הכי "מנגינתית" (הרבה צלילים, בעיקר חד-קולית, בטווח שירה) */
+/**
+ * בוחר ברירת מחדל: הרצועה הכי "מנגינתית". ליווי (ארפג'ו, בס) מזוהה לפי קצב אחיד מאוד, טווח נמוך או המון צלילים,
+ * ולכן מקבל ציון נמוך. מנגינה היא בדרך כלל בטווח אמצע-גבוה, עם מגוון משכים וכמה מאות צלילים.
+ */
 export function guessMelodyTrack(m: ParsedMidi): number {
-  let best = -1, bestScore = -1
+  let best = -1, bestScore = 0
   for (const t of m.tracks) {
     if (t.notes.length < 8) continue
     const mono = monophonic(t.notes)
     const avg = mono.reduce((s, n) => s + n.pitch, 0) / mono.length
     const overlap = 1 - mono.length / t.notes.length
-    const rangeOk = avg >= 55 && avg <= 86 ? 1 : 0.4
-    const score = mono.length * rangeOk * (1 - overlap) * (/melod|vocal|voice|lead|שיר|מנגינ/i.test(t.name) ? 2 : 1)
+    const gaps = mono.slice(1).map((n, i) => n.tick - mono[i].tick)
+    const freq = new Map<number, number>()
+    gaps.forEach((g) => freq.set(g, (freq.get(g) ?? 0) + 1))
+    const uniform = gaps.length ? Math.max(...freq.values()) / gaps.length : 1
+    const range = avg >= 60 && avg <= 86 ? 1 : avg >= 52 ? 0.5 : 0.3
+    const size = 1 / (1 + mono.length / 600)
+    const nameBonus = /melod|vocal|voice|lead|canto|soprano|שיר|מנגינ/i.test(t.name) ? 2 : 1
+    const score = range * Math.max(0.02, 1 - uniform) * (1 - overlap) * size * nameBonus * (1 + avg / 200)
     if (score > bestScore) { bestScore = score; best = t.index }
   }
   return best

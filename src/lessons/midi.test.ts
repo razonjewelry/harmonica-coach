@@ -65,3 +65,12 @@ describe('ייבוא MIDI', () => {
     expect(() => parseMidi(new TextEncoder().encode('hello world').buffer as ArrayBuffer)).toThrow()
   })
 })
+
+describe('בחירת רצועת מנגינה מול ליווי', () => {
+  it('מעדיף מנגינה מגוונת על פני ארפג׳ו אחיד וארוך', () => {
+    const arp = Array.from({ length: 800 }, (_, i) => ({ tick: i * 120, dur: 100, pitch: [48, 52, 55, 60][i % 4] }))
+    const mel = Array.from({ length: 60 }, (_, i) => ({ tick: i * 240 + (i % 3) * 120, dur: 100 + (i % 3) * 60, pitch: 67 + (i % 5) }))
+    const m = { ppq: 120, bpm: 90, title: '', lyrics: [], tracks: [{ index: 0, name: '', notes: arp }, { index: 1, name: '', notes: mel }] }
+    expect(guessMelodyTrack(m)).toBe(1)
+  })
+})
