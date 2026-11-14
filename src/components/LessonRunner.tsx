@@ -37,11 +37,12 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     setFrame(f)
     const m = matcher.current
     if (!m || m.done) return
-    const e = m.push(f.stable)
+    const t = m.target
+    const e = m.push(f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null), f.onset)
     if (e.advanced) { setIndex(e.index); setMsg('נכון!') }
     if (e.wrong && m.target) setMsg(`שמעתי ${e.wrong}. צריך ${m.target}.`)
     if (e.done) setPhase('success')
-  }, phase !== 'listening')
+  }, phase !== 'listening', () => matcher.current?.target ?? null)
 
   // מפעיל את השלב הנוכחי. ההקראה תמיד נגמרת לפני שהמיקרופון מתחיל להקשיב.
   useEffect(() => {

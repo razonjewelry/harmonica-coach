@@ -27,3 +27,12 @@ export function playTone(note: string, seconds = 1.4): Promise<void> {
     }
   })
 }
+
+/** מנגן רצף צלילים (שמע איך השיר הולך). onNote מדווח על האינדקס הנוכחי; stop() מפסיק. */
+export async function playSequence(notes: string[], onNote: (i: number) => void, alive: () => boolean, noteSec = 0.5): Promise<void> {
+  for (let i = 0; i < notes.length; i++) {
+    if (!alive()) return
+    onNote(i)
+    await playTone(notes[i], noteSec)
+  }
+}

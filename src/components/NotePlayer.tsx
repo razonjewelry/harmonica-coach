@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMic } from '../audio/useMic'
 import type { MicFrame } from '../audio/useMic'
+import { playSequence } from '../audio/tone'
 import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
@@ -15,30 +16,57 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
   const [frame, setFrame] = useState<MicFrame | null>(null)
   const [msg, setMsg] = useState('')
   const [finished, setFinished] = useState(false)
+  const [previewIdx, setPreviewIdx] = useState<number | null>(null)
+  const previewRun = useRef(0)
 
-  const mic = useMic((f) => {
-    setFrame(f)
-    if (matcher.current.done) return
-    const e = matcher.current.push(f.stable)
-    if (e.advanced) { setIndex(e.index); setMsg('נכון!') }
-    if (e.wrong && matcher.current.target) setMsg(`שמעתי ${e.wrong}. צריך ${matcher.current.target}.`)
-    if (e.done && !finished) { setFinished(true); onDone?.() }
-  }, finished)
+  const mic = useMic(
+    (f) => {
+      setFrame(f)
+      if (matcher.current.done) return
+      const t = matcher.current.target
+      // צליל מזוהה כללי, או אימות מחזוריות של הצליל המבוקש (לצלילים נשימתיים)
+      const eff = f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null)
+      const e = matcher.current.push(eff, f.onset)
+      if (e.advanced) { setIndex(e.index); setMsg('נכון!') }
+      if (e.wrong && matcher.current.target) setMsg(`שמעתי ${e.wrong}. צריך ${matcher.current.target}.`)
+      if (e.done && !finished) { setFinished(true); onDone?.() }
+    },
+    finished || previewIdx !== null,
+    () => matcher.current.target,
+  )
+
+  useEffect(() => () => { previewRun.current++ }, [])
 
   const restart = () => { matcher.current = new SequenceMatcher(notes); setIndex(0); setMsg(''); setFinished(false) }
+  const stopPreview = () => { previewRun.current++; setPreviewIdx(null) }
+  const preview = async () => {
+    const my = ++previewRun.current
+    setPreviewIdx(0)
+    await playSequence(notes, (i) => setPreviewIdx(i), () => previewRun.current === my)
+    if (previewRun.current === my) setPreviewIdx(null)
+  }
+
   const target = matcher.current.target
+  const shownIndex = previewIdx ?? index
 
   return (
     <div className="card">
       <MicBar status={mic.status} onStart={() => void mic.start()} />
       {lyrics ? (
-        <Karaoke lyrics={lyrics} notes={notes} index={index} />
+        <Karaoke lyrics={lyrics} notes={notes} index={shownIndex} />
       ) : (
         <div className="dots" dir="ltr">
-          {notes.map((n, i) => <span key={i} className={i < index ? 'dot done' : i === index ? 'dot cur' : 'dot'} title={n} />)}
+          {notes.map((n, i) => <span key={i} className={i < shownIndex ? 'dot done' : i === shownIndex ? 'dot cur' : 'dot'} title={n} />)}
         </div>
       )}
-      {finished ? (
+      <div className="row">
+        {previewIdx === null
+          ? <button className="btn" onClick={() => void preview()}>🔊 שמע איך זה הולך</button>
+          : <button className="btn" onClick={stopPreview}>⏹ עצור הדגמה</button>}
+      </div>
+      {previewIdx !== null ? (
+        <div className="msg">מנגן הדגמה... (המיקרופון מושהה)</div>
+      ) : finished ? (
         <div className="success">
           <h2>סיימת!</h2>
           <button className="btn primary" onClick={restart}>עוד פעם</button>
@@ -52,7 +80,10 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
           <HarmonicaView target={target} heard={frame?.stable?.note ?? null} />
           <NoteMeter frame={frame} />
           <div className="msg" aria-live="polite">{msg}</div>
-          <button className="btn" onClick={restart}>התחל מהתחלה</button>
+          <div className="row">
+            <button className="btn" onClick={restart}>התחל מהתחלה</button>
+            <button className="btn" onClick={() => { const m = matcher.current; m.skip(); setIndex(m.index); setMsg('דילגת על הצליל') }}>דלג על הצליל</button>
+          </div>
         </>
       )}
     </div>

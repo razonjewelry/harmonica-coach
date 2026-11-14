@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { detectPitch, StabilityTracker } from '../harmonica/pitch'
+import { bandpass, detectPitchFiltered, StabilityTracker, OnsetDetector, TargetVote, targetPeriodicity } from '../harmonica/pitch'
+import { noteToFreq } from '../harmonica/notes'
 import type { NoteMatch, PitchResult } from '../harmonica/pitch'
 import { matchNote } from '../harmonica/pitch'
 
@@ -12,6 +13,10 @@ export interface MicFrame {
   raw: { note: string; cents: number } | null
   confidence: number
   rms: number
+  /** תחילת צליל חדש לפי העוצמה */
+  onset: boolean
+  /** הצליל המבוקש אומת במחזוריות (לא תלוי בזיהוי הכללי) */
+  targetHit: boolean
 }
 
 export const MIC_MESSAGES: Record<MicStatus, string> = {
@@ -24,7 +29,7 @@ export const MIC_MESSAGES: Record<MicStatus, string> = {
   error: 'שגיאה בהפעלת המיקרופון. נסה לטעון מחדש.',
 }
 
-export function useMic(onFrame: (f: MicFrame) => void, paused: boolean) {
+export function useMic(onFrame: (f: MicFrame) => void, paused: boolean, getTarget?: () => string | null) {
   const [status, setStatus] = useState<MicStatus>('idle')
   const ctxRef = useRef<AudioContext | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -32,6 +37,10 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean) {
   const frameRef = useRef(onFrame)
   const pausedRef = useRef(paused)
   const trackerRef = useRef(new StabilityTracker())
+  const onsetRef = useRef(new OnsetDetector())
+  const voteRef = useRef(new TargetVote())
+  const targetFnRef = useRef(getTarget)
+  targetFnRef.current = getTarget
   frameRef.current = onFrame
   pausedRef.current = paused
 
@@ -64,13 +73,18 @@ export function useMic(onFrame: (f: MicFrame) => void, paused: boolean) {
       ctxRef.current = ctx
       const buf = new Float32Array(an.fftSize)
       trackerRef.current.reset()
+      onsetRef.current.reset()
+      voteRef.current.reset()
       timerRef.current = window.setInterval(() => {
-        if (pausedRef.current) { trackerRef.current.reset(); return }
+        if (pausedRef.current) { trackerRef.current.reset(); onsetRef.current.reset(); voteRef.current.reset(); return }
         an.getFloatTimeDomainData(buf)
-        const r: PitchResult = detectPitch(buf, ctx.sampleRate)
+        const filtered = bandpass(buf, ctx.sampleRate)
+        const r: PitchResult = detectPitchFiltered(filtered, ctx.sampleRate)
+        const tgt = targetFnRef.current?.() ?? null
+        const targetHit = tgt ? voteRef.current.push(tgt, targetPeriodicity(filtered, ctx.sampleRate, noteToFreq(tgt))) : voteRef.current.push(null, 0)
         const stable = trackerRef.current.push(r)
         const raw = r.freq !== null && r.confidence >= 0.6 ? matchNote(r.freq) : null
-        frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms })
+        frameRef.current({ stable, raw, confidence: r.confidence, rms: r.rms, onset: onsetRef.current.push(r.rms), targetHit })
       }, 40)
       setStatus('on')
     } catch (e) {

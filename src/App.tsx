@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { LESSONS, TOTAL_LESSONS } from './lessons/data'
-import { MELODIES } from './lessons/melodies'
+import { Melodies } from './components/Songs'
 import { loadProgress, markCompleted, markStep, saveProgress, resetProgress } from './lessons/progress'
 import type { LessonProgress } from './lessons/progress'
 import { LessonRunner } from './components/LessonRunner'
@@ -79,27 +79,6 @@ function Practice() {
         <button className="btn" onClick={() => setRound((r) => r + 1)}>תרגיל חדש</button>
         <button className="btn" onClick={() => setDrill(null)}>חזרה לרשימה</button>
       </div>
-    </>
-  )
-}
-
-function Melodies() {
-  const [id, setId] = useState<string | null>(null)
-  const mel = MELODIES.find((m) => m.id === id)
-  if (!mel) {
-    return (
-      <div className="card">
-        <h2>ספריית מנגינות</h2>
-        <p className="sub">כל המנגינות נמצאות בחורים 4-7, ומתאימות למתחילים.</p>
-        {MELODIES.map((m) => <button key={m.id} className="btn list" onClick={() => setId(m.id)}>{m.title} · {m.notes.length} צלילים</button>)}
-      </div>
-    )
-  }
-  return (
-    <>
-      <h2 className="pad">{mel.title}</h2>
-      <NotePlayer key={mel.id} notes={mel.notes} lyrics={mel.lyrics} />
-      <div className="row"><button className="btn" onClick={() => setId(null)}>חזרה לרשימה</button></div>
     </>
   )
 }

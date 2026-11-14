@@ -64,3 +64,10 @@ hr { border: 0; border-top: 1px solid var(--panel2); margin: 16px 0; }
 .syl i { font-style: normal; font-size: 13px; margin-top: 2px; }
 .syl.done { color: var(--teal); }
 .syl.cur { background: var(--warn); color: #2a1d00; transform: scale(1.12); }
+
+.songrow { display: flex; gap: 8px; align-items: stretch; }
+.songrow .btn.list { flex: 1; }
+.btn.small { min-width: 56px; padding: 8px; }
+.btn:disabled { opacity: .4; }
+.field { display: block; margin: 10px 0; color: var(--sub); font-size: 14px; }
+.field input, .field textarea { display: block; width: 100%; margin-top: 6px; padding: 12px; font-size: 17px; border-radius: 12px; border: 1px solid var(--panel2); background: #0d1d38; color: var(--text); font-family: inherit; }

@@ -60,6 +60,25 @@ describe('נתוני שיעורים', () => {
   })
 })
 
+describe('נגינה חוזרת ומעבר בין צלילים', () => {
+  it('מעבר ישיר לצליל אחר (בלי שקט) מתקדם', () => {
+    const s = new SequenceMatcher(['G5', 'F5'])
+    s.push(m('G5'))
+    expect(s.push(m('F5')).advanced).toBe(true)
+  })
+  it('אותו צליל פעמיים עם תחילת צליל חדש (בלי שקט) מתקדם', () => {
+    const s = new SequenceMatcher(['G5', 'G5'])
+    s.push(m('G5'))
+    expect(s.push(m('G5'), false).advanced).toBe(false)
+    expect(s.push(m('G5'), true).advanced).toBe(true)
+  })
+  it('דילוג ידני', () => {
+    const s = new SequenceMatcher(['G5', 'F5'])
+    s.skip()
+    expect(s.target).toBe('F5')
+  })
+})
+
 describe('קריוקי: מילים מול צלילים', () => {
   it('מספר ההברות שווה למספר הצלילים בכל מנגינה', () => {
     for (const mel of MELODIES) {

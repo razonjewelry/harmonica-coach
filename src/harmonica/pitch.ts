@@ -30,10 +30,14 @@ export function bandpass(buf: Float32Array, sampleRate: number): Float32Array {
 
 /** YIN עם סינון רעש. מחזיר freq=null כשאין צליל ברור. */
 export function detectPitch(raw: Float32Array, sampleRate: number, opts: { minRms?: number; threshold?: number; floor?: number } = {}): PitchResult {
+  return detectPitchFiltered(bandpass(raw, sampleRate), sampleRate, opts)
+}
+
+/** כמו detectPitch, על אות שכבר עבר סינון פס */
+export function detectPitchFiltered(buf: Float32Array, sampleRate: number, opts: { minRms?: number; threshold?: number; floor?: number } = {}): PitchResult {
   const minRms = opts.minRms ?? 0.003
   const threshold = opts.threshold ?? 0.15
   const floor = opts.floor ?? 0.35
-  const buf = bandpass(raw, sampleRate)
   let sum = 0
   for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
   const rms = Math.sqrt(sum / buf.length)
@@ -70,6 +74,43 @@ export function detectPitch(raw: Float32Array, sampleRate: number, opts: { minRm
   return { freq: sampleRate / (tau + shift), confidence: Math.max(0, Math.min(1, 1 - cm[tau])), rms }
 }
 
+/**
+ * האם הצליל המבוקש נשמע? בודק מחזוריות בדיוק באורך המחזור של הצליל המבוקש (±40 סנט).
+ * מחזיר 0 אם האות מחזורי גם בחצי המחזור (כלומר צליל גבוה יותר) או אם שקט מדי.
+ * עוזר בצלילים נשימתיים שהזיהוי הכללי מפספס, בלי לאשר אקורד, רעש או צליל אחר.
+ */
+export function targetPeriodicity(buf: Float32Array, sampleRate: number, targetFreq: number): number {
+  let sum = 0
+  for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
+  if (Math.sqrt(sum / buf.length) < 0.003) return 0
+  const half = Math.floor(buf.length / 2)
+  const tauT = sampleRate / targetFreq
+  const lo = Math.max(2, Math.floor(tauT * 0.9))
+  const hi = Math.ceil(tauT * 1.1) + 1
+  if (hi >= half) return 0
+  const cm = new Float32Array(hi + 2)
+  let run = 0
+  for (let tau = 1; tau <= hi; tau++) {
+    let d = 0
+    for (let i = 0; i < half; i++) { const x = buf[i] - buf[i + tau]; d += x * x }
+    run += d
+    cm[tau] = run === 0 ? 1 : (d * tau) / run
+  }
+  // מינימום מקומי אמיתי סביב המחזור המבוקש, ובדיוק של עד 40 סנט
+  let best = lo
+  for (let t = lo; t <= hi; t++) if (cm[t] < cm[best]) best = t
+  if (best === lo || best === hi) return 0
+  const a = cm[best - 1], b = cm[best], c = cm[best + 1]
+  const den = a + c - 2 * b
+  const tauRef = best + (den === 0 ? 0 : (a - c) / (2 * den))
+  const cents = 1200 * Math.log2(sampleRate / tauRef / targetFreq)
+  if (Math.abs(cents) > 40) return 0
+  // אם האות מחזורי גם בחצי מחזור, הצליל בעצם גבוה יותר
+  let upper = 1
+  for (let t = Math.max(2, Math.floor(tauT * 0.45)); t <= Math.ceil(tauT * 0.55); t++) upper = Math.min(upper, cm[t])
+  return 1 - upper > 0.6 ? 0 : 1 - b
+}
+
 export interface NoteMatch { note: string; cents: number }
 export function matchNote(freq: number): NoteMatch {
   const m = freqToMidiFloat(freq), r = Math.round(m)
@@ -77,32 +118,77 @@ export function matchNote(freq: number): NoteMatch {
 }
 
 /**
- * יציבות: צליל מאושר רק אחרי N פריימים באותו תו, בביטחון מספיק ובסטייה קטנה.
- * מותר פריים אחד שנפל באמצע (נשימה), שני פריימים רצופים מאפסים.
+ * יציבות בהצבעת רוב: צליל מאושר כשאותו תו מופיע לפחות 3 פעמים מתוך 6 הפריימים האחרונים,
+ * בביטחון מספיק ובסטייה של עד 45 סנט. עמיד לפריימים בודדים רועשים (צלילים גבוהים ונשימתיים).
+ * אקורד, רעש וצליל לא ברור מפזרים את הקולות ולכן לא מאושרים.
  */
 export class StabilityTracker {
-  private last: string | null = null
-  private count = 0
-  private misses = 0
+  private win: (NoteMatch | null)[] = []
+  private size: number
   private need: number
   private minConf: number
   private maxCents: number
-  constructor(need = 4, minConf = 0.7, maxCents = 40) {
+  constructor(need = 3, minConf = 0.5, maxCents = 45, size = 6) {
     this.need = need
     this.minConf = minConf
     this.maxCents = maxCents
+    this.size = size
   }
   push(r: PitchResult): NoteMatch | null {
-    const ok = r.freq !== null && r.confidence >= this.minConf
-    const m = ok ? matchNote(r.freq as number) : null
-    if (!m || Math.abs(m.cents) > this.maxCents) {
-      this.misses++
-      if (this.misses >= 2) this.reset()
-      return this.count >= this.need && this.last ? { note: this.last, cents: 0 } : null
+    let e: NoteMatch | null = null
+    if (r.freq !== null && r.confidence >= this.minConf) {
+      const m = matchNote(r.freq)
+      if (Math.abs(m.cents) <= this.maxCents) e = m
     }
-    this.misses = 0
-    if (m.note === this.last) this.count++; else { this.last = m.note; this.count = 1 }
-    return this.count >= this.need ? m : null
+    this.win.push(e)
+    if (this.win.length > this.size) this.win.shift()
+    const votes = new Map<string, number[]>()
+    for (const x of this.win) if (x) votes.set(x.note, [...(votes.get(x.note) ?? []), x.cents])
+    let best: string | null = null
+    for (const [n, c] of votes) if (c.length >= this.need && (best === null || c.length > (votes.get(best)?.length ?? 0))) best = n
+    if (best === null) return null
+    const cs = [...(votes.get(best) as number[])].sort((a, b) => a - b)
+    return { note: best, cents: cs[Math.floor(cs.length / 2)] }
   }
-  reset() { this.last = null; this.count = 0; this.misses = 0 }
+  reset() { this.win = [] }
+}
+
+/**
+ * זיהוי תחילת צליל חדש לפי ירידה וחזרה בעוצמה. מאפשר לנגן אותו צליל פעמיים ברצף
+ * (למשל סול סול) גם בלי שקט מלא ביניהם.
+ */
+export class OnsetDetector {
+  private h: number[] = []
+  private cool = 0
+  push(rms: number): boolean {
+    const n = this.h.length
+    let onset = false
+    if (n >= 6 && this.cool === 0) {
+      const prev = this.h.slice(n - 6)
+      const prevMax = Math.max(...prev)
+      const iMax = prev.indexOf(prevMax)
+      const after = prev.slice(iMax + 1)
+      const prevMin = after.length ? Math.min(...after.slice(-3)) : prevMax
+      onset = after.length > 0 && prevMax > 0.004 && prevMin < 0.55 * prevMax && rms > 1.5 * prevMin && rms >= 0.7 * prevMax
+      if (onset) this.cool = 5
+    }
+    if (this.cool > 0 && !onset) this.cool--
+    this.h.push(rms)
+    if (this.h.length > 8) this.h.shift()
+    return onset
+  }
+  reset() { this.h = []; this.cool = 0 }
+}
+
+/** הצבעת רוב לגבי "הצליל המבוקש נשמע": 3 פריימים מתוך 6 עם מחזוריות של לפחות 75% */
+export class TargetVote {
+  private win: boolean[] = []
+  private target: string | null = null
+  push(target: string | null, conf: number): boolean {
+    if (target !== this.target) { this.target = target; this.win = [] }
+    this.win.push(conf >= 0.75)
+    if (this.win.length > 6) this.win.shift()
+    return target !== null && this.win.filter(Boolean).length >= 3
+  }
+  reset() { this.win = []; this.target = null }
 }
