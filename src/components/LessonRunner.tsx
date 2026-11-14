@@ -4,7 +4,7 @@ import { hebrewName } from '../lessons/data'
 import { SequenceMatcher } from '../lessons/sequence'
 import { useMic } from '../audio/useMic'
 import type { MicFrame } from '../audio/useMic'
-import { playTone } from '../audio/tone'
+import { playTone, playMelody } from '../audio/tone'
 import { speak, stopSpeaking, voiceEnabled, getHebrewVoice } from '../harmonica/speech'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
@@ -17,12 +17,12 @@ interface Props {
   lesson: Lesson
   startStep: number
   onStep: (i: number) => void
-  onComplete: () => void
+  onComplete: (skips: number) => void
   onExit: () => void
 }
 
 const stepNotes = (s: Step): string[] =>
-  s.kind === 'practice' ? Array(s.repeats).fill(s.note) : s.kind === 'check' ? s.notes : []
+  s.kind === 'practice' ? Array(s.repeats).fill(s.note) : s.kind === 'check' || s.kind === 'echo' ? s.notes : []
 
 export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: Props) {
   const [stepIdx, setStepIdx] = useState(Math.min(startStep, lesson.steps.length - 1))
@@ -34,6 +34,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   const hold = useRef<{ note: string; ms: number; start: number | null } | null>(null)
   const [holdPct, setHoldPct] = useState(0)
   const run = useRef(0)
+  const skips = useRef(0)
   const step = lesson.steps[stepIdx]
 
   const mic = useMic((f) => {
@@ -59,7 +60,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     const t = m.target
     const e = m.push(f.stable ?? (f.targetHit && t ? { note: t, cents: 0 } : null), f.onset, f.sounding)
     if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
-    if (e.wrong && m.target) flash(`שמעתי ${e.wrong}. צריך ${m.target}.`, 2500)
+    if (e.wrong && m.target) flash(`כמעט! צריך ${holeLabel(m.target)}`, 2500)
     if (e.done) setPhase('success')
   }, phase !== 'listening', () => matcher.current?.target ?? hold.current?.note ?? null)
 
@@ -81,7 +82,12 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
         await playTone(step.note)
         if (!alive()) return
       }
-      if (step.kind === 'practice' || step.kind === 'check') {
+      if (step.kind === 'echo') {
+        // משחק הד: האפליקציה מנגנת, ואז מקשיבה לך
+        await playMelody(step.notes, undefined, 80, () => {}).done
+        if (!alive()) return
+      }
+      if (step.kind === 'practice' || step.kind === 'check' || step.kind === 'echo') {
         matcher.current = new SequenceMatcher(stepNotes(step))
         setPhase('listening')
       } else if (step.kind === 'hold') {
@@ -104,7 +110,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   }, [phase])
 
   const next = () => {
-    if (stepIdx + 1 >= lesson.steps.length) { onComplete(); return }
+    if (stepIdx + 1 >= lesson.steps.length) { onComplete(skips.current); return }
     const n = stepIdx + 1
     setStepIdx(n)
     onStep(n)
@@ -117,6 +123,12 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     setPhase('speaking')
     await playTone(step.note)
     setPhase('ready')
+  }
+  const replayEcho = async () => {
+    if (step.kind !== 'echo') return
+    setPhase('speaking')
+    await playMelody(step.notes, undefined, 80, () => {}).done
+    setPhase('listening')
   }
 
   const notes = stepNotes(step)
@@ -141,7 +153,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       <MicBar status={mic.status} onStart={() => void mic.start()} />
       {noVoice && <div className="warn">לא נמצא קול עברי במכשיר, לכן ההדרכה מוצגת בכתב בלבד. אפשר להתקין קול עברי בהגדרות הטקסט-לדיבור של המכשיר.</div>}
 
-      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : step.kind === 'hold' ? 'צליל ארוך' : 'בדיקה'}</h3>
+      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : step.kind === 'hold' ? 'צליל ארוך' : step.kind === 'echo' ? '🎧 הד' : 'בדיקה'}</h3>
       <p className="say">{step.say}</p>
 
       {(step.kind === 'demo' || step.kind === 'hold' || notes.length > 0) && (
@@ -166,8 +178,9 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       <div className="row">
         {phase === 'speaking' && <button className="btn" onClick={skipSpeech}>דלג על ההקראה</button>}
         {phase === 'ready' && step.kind === 'demo' && <button className="btn" onClick={() => void replayDemo()}>שמע שוב</button>}
-        {phase === 'ready' && <button className="btn primary" onClick={step.kind === 'summary' ? onComplete : next}>{step.kind === 'summary' ? 'סיום שיעור' : 'הבא'}</button>}
-        {phase === 'listening' && <button className="btn" onClick={next}>דלג על שלב זה</button>}
+        {phase === 'ready' && <button className="btn primary" onClick={step.kind === 'summary' ? () => onComplete(skips.current) : next}>{step.kind === 'summary' ? 'סיום שיעור' : 'הבא'}</button>}
+        {phase === 'listening' && step.kind === 'echo' && <button className="btn" onClick={() => void replayEcho()}>🎧 שמע שוב</button>}
+        {phase === 'listening' && <button className="btn" onClick={() => { skips.current++; next() }}>דלג על שלב זה</button>}
         <button className="btn" onClick={() => { stopSpeaking(); onExit() }}>יציאה</button>
       </div>
     </div>

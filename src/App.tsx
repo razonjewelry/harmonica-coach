@@ -4,7 +4,7 @@ import { LESSONS, TOTAL_LESSONS } from './lessons/data'
 import { Melodies } from './components/Songs'
 import { readIncoming } from './components/LinkImport'
 import type { Incoming } from './components/LinkImport'
-import { loadProgress, markCompleted, markStep, saveProgress, resetProgress } from './lessons/progress'
+import { loadProgress, markCompleted, markStep, saveProgress, resetProgress, starsFor } from './lessons/progress'
 import type { LessonProgress } from './lessons/progress'
 import { LessonRunner } from './components/LessonRunner'
 import { NotePlayer } from './components/NotePlayer'
@@ -129,7 +129,7 @@ export default function App() {
             lesson={lesson}
             startStep={resume}
             onStep={(i) => update(markStep(progress, lesson.id, i))}
-            onComplete={() => { update(markCompleted(progress, lesson.id)); setLessonId(null); setTab('path') }}
+            onComplete={(skips) => { update(markCompleted(progress, lesson.id, new Date(), starsFor(skips))); setLessonId(null); setTab('path') }}
             onExit={() => setLessonId(null)}
           />
         </main>
@@ -144,7 +144,8 @@ export default function App() {
         {tab === 'home' && (
           <div className="card">
             <h2>שלום! נלמד מפוחית</h2>
-            <p className="sub">התקדמת: {doneCount} מתוך {TOTAL_LESSONS} שיעורים ({LESSONS.length} זמינים כרגע)</p>
+            <p className="sub">התקדמת: {doneCount} מתוך {TOTAL_LESSONS} שיעורים</p>
+            {progress.streak && progress.streak.count > 1 && <p className="streak">🔥 {progress.streak.count} ימים ברצף</p>}
             {progress.last && <button className="btn primary big" onClick={() => setLessonId(progress.last!.lessonId)}>המשך מהמקום האחרון</button>}
             {!progress.last && nextLesson && <button className="btn primary big" onClick={() => setLessonId(nextLesson.id)}>שיעור {nextLesson.number}: {nextLesson.title}</button>}
             {!progress.last && !nextLesson && <p>סיימת את כל השיעורים הזמינים. אפשר לחזור עליהם במסלול, או לנגן מנגינות.</p>}
@@ -161,7 +162,7 @@ export default function App() {
             <h2>מסלול לימוד</h2>
             {LESSONS.map((l) => (
               <button key={l.id} className="btn list" onClick={() => setLessonId(l.id)}>
-                <b>{progress.completed[l.id] ? '✅' : progress.last?.lessonId === l.id ? '▶️' : '○'} שיעור {l.number}: {l.title}</b>
+                <b>{progress.last?.lessonId === l.id ? '▶️' : progress.completed[l.id] ? '✅' : '○'} שיעור {l.number}: {l.title} {progress.completed[l.id] ? <span className="stars">{'⭐'.repeat(progress.completed[l.id].stars ?? 3)}</span> : null}</b>
                 <small>{l.goal}</small>
               </button>
             ))}

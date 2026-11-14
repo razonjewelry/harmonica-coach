@@ -40,9 +40,9 @@ describe('נתוני שיעורים', () => {
   it('לכל שיעור יש הסבר, הדגמה/תרגול, בדיקה וסיכום', () => {
     for (const l of LESSONS) {
       const kinds = l.steps.map((s) => s.kind)
-      expect(kinds[0]).toBe('explain')
+      expect(['explain', 'demo', 'check', 'echo']).toContain(kinds[0])
       expect(kinds[kinds.length - 1]).toBe('summary')
-      expect(kinds.some((k) => k === 'check' || k === 'hold')).toBe(true)
+      expect(kinds.some((k) => k === 'check' || k === 'hold' || k === 'echo')).toBe(true)
     }
   })
   it('24 שיעורים עם מזהים ומספרים ייחודיים', () => {
@@ -54,7 +54,7 @@ describe('נתוני שיעורים', () => {
     const notes: string[] = []
     for (const l of LESSONS) for (const s of l.steps) {
       if (s.kind === 'demo' || s.kind === 'practice' || s.kind === 'hold') notes.push(s.note)
-      if (s.kind === 'check') notes.push(...s.notes)
+      if (s.kind === 'check' || s.kind === 'echo') notes.push(...s.notes)
     }
     for (const mel of MELODIES) notes.push(...mel.notes)
     for (const n of notes) expect(findHole(n).length, n).toBeGreaterThan(0)
@@ -140,5 +140,26 @@ describe('לימוד קצב מהקשות', () => {
   it('אם הפסקת באמצע, שאר הצלילים מקבלים פעימה אחת', async () => {
     const { tapsToBeats } = await import('../components/RhythmTapper')
     expect(tapsToBeats([0, 600, 1200], 5).beats).toEqual([1, 1, 1, 1, 1])
+  })
+})
+
+
+describe('כוכבים ורצף ימים', () => {
+  it('כוכבים לפי דילוגים, ונשמר הטוב ביותר', async () => {
+    const { starsFor } = await import('./progress')
+    expect([starsFor(0), starsFor(1), starsFor(3)]).toEqual([3, 2, 1])
+    let p = markCompleted(emptyProgress(), 'l1', new Date(2026, 10, 14), 1)
+    p = markCompleted(p, 'l1', new Date(2026, 10, 14), 3)
+    p = markCompleted(p, 'l1', new Date(2026, 10, 14), 2)
+    expect(p.completed['l1'].stars).toBe(3)
+  })
+  it('רצף: היום +1 אחרי אתמול, מתאפס אחרי הפסקה', () => {
+    let p = markCompleted(emptyProgress(), 'l1', new Date(2026, 10, 13))
+    p = markCompleted(p, 'l2', new Date(2026, 10, 14))
+    expect(p.streak?.count).toBe(2)
+    p = markCompleted(p, 'l3', new Date(2026, 10, 14))
+    expect(p.streak?.count).toBe(2)
+    p = markCompleted(p, 'l4', new Date(2026, 10, 17))
+    expect(p.streak?.count).toBe(1)
   })
 })
