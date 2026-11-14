@@ -21,7 +21,7 @@ const tag = (n: string) => {
   return f ? `${f.hole}${f.action === 'blow' ? '↑' : '↓'}` : n
 }
 
-type Draft = { title: string; notes: string[]; beats?: number[]; lyrics: string[]; phrases?: number[] }
+type Draft = { title: string; notes: string[]; beats?: number[]; lyrics: string[]; phrases?: number[]; bpm?: number }
 
 /** מסך אישור לשיר שהגיע מקישור או מהסימנייה: רואים תצוגה מקדימה ושומרים */
 export function IncomingScreen({ incoming, onSave, onCancel }: { incoming: Incoming; onSave: (s: CustomSong) => void; onCancel: () => void }) {
@@ -36,7 +36,7 @@ export function IncomingScreen({ incoming, onSave, onCancel }: { incoming: Incom
         if (incoming.kind === 'song') {
           const s = await unpackJson<CustomSong>(incoming.data)
           if (!Array.isArray(s.notes) || !s.notes.length || s.notes.some((n) => !findHole(n).length)) throw new Error('הקישור פגום')
-          if (alive) { setDraft({ title: s.title, notes: s.notes, beats: s.beats, lyrics: s.lyrics ?? [], phrases: s.phrases }); setTitle(s.title) }
+          if (alive) { setDraft({ title: s.title, notes: s.notes, beats: s.beats, lyrics: s.lyrics ?? [], phrases: s.phrases, bpm: s.bpm }); setTitle(s.title) }
         } else {
           const r = incoming.kind === 'text'
             ? parsePageText(incoming.title ?? '', incoming.data)
@@ -66,7 +66,7 @@ export function IncomingScreen({ incoming, onSave, onCancel }: { incoming: Incom
       {draft.lyrics[0] && <div className="ltext">{draft.lyrics[0]}</div>}
       <div className="lholes" dir="ltr">{first.map((n, i) => <span key={i} className="hc">{tag(n)}</span>)}</div>
       <div className="row">
-        <button className="btn primary" disabled={!title.trim()} onClick={() => onSave({ id: 'c' + Date.now(), title: title.trim(), notes: draft.notes, beats: draft.beats, lyrics: draft.lyrics, phrases: draft.phrases })}>שמור שיר</button>
+        <button className="btn primary" disabled={!title.trim()} onClick={() => onSave({ id: 'c' + Date.now(), title: title.trim(), notes: draft.notes, beats: draft.beats, lyrics: draft.lyrics, phrases: draft.phrases, bpm: draft.bpm })}>שמור שיר</button>
         <button className="btn" onClick={onCancel}>ביטול</button>
       </div>
     </div>

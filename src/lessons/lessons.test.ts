@@ -128,3 +128,16 @@ describe('זנב הצליל', () => {
     expect(s.push(m('G5'), false, true).advanced).toBe(true)
   })
 })
+
+describe('לימוד קצב מהקשות', () => {
+  it('הקשות במרווחים של 500ms ו-1000ms הופכות לפעימה אחת ושתיים', async () => {
+    const { tapsToBeats } = await import('../components/RhythmTapper')
+    const r = tapsToBeats([0, 500, 1000, 2000, 2500, 3000], 5)
+    expect(r.beats).toEqual([1, 1, 2, 1, 1])
+    expect(r.bpm).toBe(120)
+  })
+  it('אם הפסקת באמצע, שאר הצלילים מקבלים פעימה אחת', async () => {
+    const { tapsToBeats } = await import('../components/RhythmTapper')
+    expect(tapsToBeats([0, 600, 1200], 5).beats).toEqual([1, 1, 1, 1, 1])
+  })
+})

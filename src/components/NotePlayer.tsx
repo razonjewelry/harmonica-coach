@@ -10,9 +10,10 @@ import { LineKaraoke } from './LineKaraoke'
 import { autoPhrases } from '../lessons/melodies'
 import { hebrewName } from '../lessons/data'
 import { useFlash } from './useFlash'
+import { RhythmTapper } from './RhythmTapper'
 
 /** מאזין לרצף צלילים דרך המיקרופון ומציג מה לנגן עכשיו. משמש לתרגול ולמנגינות. */
-export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }: { notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; phrases?: number[]; onDone?: () => void }) {
+export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone, onRhythm }: { notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; phrases?: number[]; onDone?: () => void; onRhythm?: (beats: number[], bpm: number) => void }) {
   const matcher = useRef(new SequenceMatcher(notes))
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
@@ -21,6 +22,9 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
   const [previewIdx, setPreviewIdx] = useState<number | null>(null)
   const previewRun = useRef(0)
   const [speed, setSpeed] = useState(1)
+  const [tapping, setTapping] = useState(false)
+  const autoBeats = beats ?? (phrases ? phrases.flatMap((c) => Array.from({ length: c }, (_, k) => (k === c - 1 ? 2 : 1))) : undefined)
+  const playBpm = beats ? bpm : Math.min(bpm, 90)
 
   const mic = useMic(
     (f) => {
@@ -45,7 +49,7 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
   const preview = async () => {
     const my = ++previewRun.current
     setPreviewIdx(0)
-    const h = playMelody(notes, beats, bpm * speed, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
+    const h = playMelody(notes, autoBeats, playBpm * speed, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
     await h.done
     if (previewRun.current === my) setPreviewIdx(null)
   }
@@ -56,6 +60,10 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
   const shownTarget = previewIdx !== null ? notes[previewIdx] : finished ? null : target
   const heardNote = frame?.raw?.note ?? null
   const heardStable = !!frame?.stable && frame.stable.note === heardNote
+
+  if (tapping && onRhythm) {
+    return <RhythmTapper notes={notes} lyrics={lyrics} phrases={phrases} beats={beats} onCancel={() => setTapping(false)} onDone={(b, p) => { setTapping(false); onRhythm(b, p) }} />
+  }
 
   return (
     <div className="card">
@@ -91,6 +99,7 @@ export function NotePlayer({ notes, lyrics, beats, bpm = 100, phrases, onDone }:
         {previewIdx === null
           ? <button className="btn" onClick={() => void preview()}>🔊 שמע איך זה הולך</button>
           : <button className="btn" onClick={stopPreview}>⏹ עצור הדגמה</button>}
+        {onRhythm && previewIdx === null && <button className="btn" onClick={() => { stopPlayback(); setTapping(true) }}>🥁 הקש קצב</button>}
         <div className="speed" role="group" aria-label="מהירות ההדגמה">
           {[0.5, 0.75, 1].map((s) => (
             <button key={s} className={`btn chipbtn${speed === s ? ' on' : ''}`} onClick={() => setSpeed(s)}>{s === 1 ? 'רגיל' : `${Math.round(s * 100)}%`}</button>

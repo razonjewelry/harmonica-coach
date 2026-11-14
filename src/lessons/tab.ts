@@ -37,7 +37,7 @@ export function parseTab(text: string): ParsedTab {
 }
 
 /** phrases: כמה צלילים בכל שורת מילים (מצב שורות). בלעדיו, הברה אחת לכל צליל */
-export interface CustomSong { id: string; title: string; notes: string[]; lyrics: string[]; beats?: number[]; phrases?: number[] }
+export interface CustomSong { id: string; title: string; notes: string[]; lyrics: string[]; beats?: number[]; phrases?: number[]; bpm?: number }
 const KEY = 'hc.songs.v1'
 
 export function loadSongs(store: Pick<Storage, 'getItem'> = localStorage): CustomSong[] {
