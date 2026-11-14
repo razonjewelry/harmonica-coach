@@ -31,11 +31,29 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   const [frame, setFrame] = useState<MicFrame | null>(null)
   const [msg, flash, clearMsg] = useFlash()
   const matcher = useRef<SequenceMatcher | null>(null)
+  const hold = useRef<{ note: string; ms: number; start: number | null } | null>(null)
+  const [holdPct, setHoldPct] = useState(0)
   const run = useRef(0)
   const step = lesson.steps[stepIdx]
 
   const mic = useMic((f) => {
     setFrame(f)
+    const h = hold.current
+    if (h) {
+      // צליל ארוך: נמדד כל עוד הצליל המבוקש נשמע ברציפות
+      const ok = f.sounding && (f.stable?.note === h.note || f.targetHit)
+      const now = performance.now()
+      if (ok) {
+        h.start = h.start ?? now
+        const pct = Math.min(1, (now - h.start) / h.ms)
+        setHoldPct(pct)
+        if (pct >= 1) { hold.current = null; setPhase('success') }
+      } else if (h.start !== null) {
+        h.start = null
+        setHoldPct(0)
+      }
+      return
+    }
     const m = matcher.current
     if (!m || m.done) return
     const t = m.target
@@ -43,7 +61,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     if (e.advanced) { setIndex(e.index); flash('נכון!', 900) }
     if (e.wrong && m.target) flash(`שמעתי ${e.wrong}. צריך ${m.target}.`, 2500)
     if (e.done) setPhase('success')
-  }, phase !== 'listening', () => matcher.current?.target ?? null)
+  }, phase !== 'listening', () => matcher.current?.target ?? hold.current?.note ?? null)
 
   // מפעיל את השלב הנוכחי. ההקראה תמיד נגמרת לפני שהמיקרופון מתחיל להקשיב.
   useEffect(() => {
@@ -51,6 +69,8 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
     const my = ++run.current
     const alive = () => run.current === my
     matcher.current = null
+    hold.current = null
+    setHoldPct(0)
     setIndex(0)
     clearMsg()
     setPhase('speaking')
@@ -63,6 +83,9 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       }
       if (step.kind === 'practice' || step.kind === 'check') {
         matcher.current = new SequenceMatcher(stepNotes(step))
+        setPhase('listening')
+      } else if (step.kind === 'hold') {
+        hold.current = { note: step.note, ms: step.seconds * 1000, start: null }
         setPhase('listening')
       } else {
         setPhase('ready')
@@ -97,7 +120,7 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
   }
 
   const notes = stepNotes(step)
-  const target = matcher.current?.target ?? (step.kind === 'demo' ? step.note : null)
+  const target = matcher.current?.target ?? (step.kind === 'demo' || step.kind === 'hold' ? step.note : null)
   const noVoice = voiceEnabled() && !getHebrewVoice()
 
   if (phase === 'gate') {
@@ -118,10 +141,10 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
       <MicBar status={mic.status} onStart={() => void mic.start()} />
       {noVoice && <div className="warn">לא נמצא קול עברי במכשיר, לכן ההדרכה מוצגת בכתב בלבד. אפשר להתקין קול עברי בהגדרות הטקסט-לדיבור של המכשיר.</div>}
 
-      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : 'בדיקה'}</h3>
+      <h3>{step.kind === 'explain' ? step.title : step.kind === 'summary' ? 'סיכום' : step.kind === 'demo' ? 'הדגמה' : step.kind === 'practice' ? 'תרגול' : step.kind === 'hold' ? 'צליל ארוך' : 'בדיקה'}</h3>
       <p className="say">{step.say}</p>
 
-      {(step.kind === 'demo' || notes.length > 0) && (
+      {(step.kind === 'demo' || step.kind === 'hold' || notes.length > 0) && (
         <>
           {target && <div className="sub target-line">{target} ({hebrewName(target)}) · {holeLabel(target)}</div>}
           <HarmonicaView target={target} heard={phase === 'listening' ? frame?.stable?.note ?? null : null} />
@@ -134,6 +157,9 @@ export function LessonRunner({ lesson, startStep, onStep, onComplete, onExit }: 
         </div>
       )}
 
+      {step.kind === 'hold' && phase === 'listening' && (
+        <div className="holdbar" aria-label="כמה זמן החזקת"><i style={{ width: `${Math.round(holdPct * 100)}%` }} /><span>{(holdPct * step.seconds).toFixed(1)} / {step.seconds} שניות</span></div>
+      )}
       {phase === 'listening' && <NoteMeter frame={frame} />}
       <div className="msg" aria-live="polite">{phase === 'speaking' ? 'המורה מדבר...' : phase === 'success' ? 'כל הכבוד! עוברים הלאה.' : msg}</div>
 

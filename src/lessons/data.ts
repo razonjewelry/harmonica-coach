@@ -1,9 +1,12 @@
+import { MORE_LESSONS } from './lessons2'
+
 // שיעורים מבוססי נתונים. כל שיעור: הסבר, הדגמה, תרגול, בדיקה וסיכום.
 export type Step =
   | { kind: 'explain'; title: string; say: string }
   | { kind: 'demo'; note: string; say: string }
   | { kind: 'practice'; note: string; repeats: number; say: string }
   | { kind: 'check'; notes: string[]; say: string }
+  | { kind: 'hold'; note: string; seconds: number; say: string }
   | { kind: 'summary'; say: string }
 
 export interface Lesson {
@@ -14,7 +17,7 @@ export interface Lesson {
   steps: Step[]
 }
 
-export const LESSONS: Lesson[] = [
+const BASE_LESSONS: Lesson[] = [
   {
     id: 'l1',
     number: 1,
@@ -80,6 +83,8 @@ export const LESSONS: Lesson[] = [
     ],
   },
 ]
+
+export const LESSONS: Lesson[] = [...BASE_LESSONS, ...MORE_LESSONS]
 
 export const TOTAL_LESSONS = 24
 

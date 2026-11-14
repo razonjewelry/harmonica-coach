@@ -42,17 +42,18 @@ describe('נתוני שיעורים', () => {
       const kinds = l.steps.map((s) => s.kind)
       expect(kinds[0]).toBe('explain')
       expect(kinds[kinds.length - 1]).toBe('summary')
-      expect(kinds).toContain('check')
+      expect(kinds.some((k) => k === 'check' || k === 'hold')).toBe(true)
     }
   })
-  it('ארבעה שיעורים לפחות עם מזהים ייחודיים', () => {
-    expect(LESSONS.length).toBeGreaterThanOrEqual(4)
+  it('24 שיעורים עם מזהים ומספרים ייחודיים', () => {
+    expect(LESSONS.length).toBe(24)
+    expect(LESSONS.map((l) => l.number)).toEqual(Array.from({ length: 24 }, (_, i) => i + 1))
     expect(new Set(LESSONS.map((l) => l.id)).size).toBe(LESSONS.length)
   })
   it('כל התווים בשיעורים ובמנגינות קיימים במפוחית C', () => {
     const notes: string[] = []
     for (const l of LESSONS) for (const s of l.steps) {
-      if (s.kind === 'demo' || s.kind === 'practice') notes.push(s.note)
+      if (s.kind === 'demo' || s.kind === 'practice' || s.kind === 'hold') notes.push(s.note)
       if (s.kind === 'check') notes.push(...s.notes)
     }
     for (const mel of MELODIES) notes.push(...mel.notes)

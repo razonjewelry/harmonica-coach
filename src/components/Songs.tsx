@@ -190,8 +190,7 @@ export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | n
   return (
     <>
       <h2 className="pad">{mel.title}</h2>
-      <NotePlayer key={mel.id + (mel.bpm ?? '') + (mel.beats?.join(',') ?? '')} notes={mel.notes} lyrics={mel.lyrics} beats={mel.beats} bpm={mel.bpm} phrases={mel.phrases}
-        onRhythm={mel.mine ? (beats, bpm) => persist(custom.map((c) => (c.id === mel.id ? { ...c, beats, bpm } : c))) : undefined} />
+      <NotePlayer key={mel.id + (mel.bpm ?? '') + (mel.beats?.join(',') ?? '')} notes={mel.notes} lyrics={mel.lyrics} beats={mel.beats} bpm={mel.bpm} phrases={mel.phrases} />
       <div className="row"><button className="btn" onClick={() => setId(null)}>חזרה לרשימה</button></div>
     </>
   )
