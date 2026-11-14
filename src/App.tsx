@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 import { LESSONS, TOTAL_LESSONS } from './lessons/data'
 import { Melodies } from './components/Songs'
+import { readIncoming } from './components/LinkImport'
+import type { Incoming } from './components/LinkImport'
 import { loadProgress, markCompleted, markStep, saveProgress, resetProgress } from './lessons/progress'
 import type { LessonProgress } from './lessons/progress'
 import { LessonRunner } from './components/LessonRunner'
@@ -107,7 +109,8 @@ function Settings({ onReset }: { onReset: () => void }) {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>('home')
+  const [incoming, setIncoming] = useState<Incoming | null>(() => readIncoming())
+  const [tab, setTab] = useState<Tab>(() => (readIncoming() ? 'melodies' : 'home'))
   const [progress, setProgress] = useState<LessonProgress>(() => loadProgress())
   const [lessonId, setLessonId] = useState<string | null>(null)
   const update = (p: LessonProgress) => { setProgress(p); saveProgress(p) }
@@ -169,7 +172,7 @@ export default function App() {
         )}
         {tab === 'practice' && <Practice />}
         {tab === 'free' && <FreeCoach />}
-        {tab === 'melodies' && <Melodies />}
+        {tab === 'melodies' && <Melodies incoming={incoming} onIncomingDone={() => { setIncoming(null); history.replaceState(null, '', window.location.pathname) }} />}
         {tab === 'settings' && <Settings onReset={() => update(resetProgress())} />}
       </main>
       <nav>

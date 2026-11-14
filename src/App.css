@@ -92,3 +92,6 @@ select, input[type=file] { display: block; width: 100%; margin-top: 6px; padding
 .speed { display: flex; gap: 6px; flex: 1; min-width: 200px; }
 .chipbtn { flex: 1; margin: 0; padding: 8px; font-size: 15px; }
 .chipbtn.on { background: var(--teal); color: #06222a; font-weight: 700; }
+
+.steps-list { padding-inline-start: 22px; line-height: 1.9; }
+.bm { display: inline-block; margin: 6px 0; cursor: grab; text-decoration: none; }

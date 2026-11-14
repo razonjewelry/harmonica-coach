@@ -7,6 +7,9 @@ import { parseMidi, buildSong, guessMelodyTrack } from '../lessons/midi'
 import type { ParsedMidi, BuiltSong } from '../lessons/midi'
 import { playMelody, stopPlayback } from '../audio/tone'
 import { findHole } from '../harmonica/notes'
+import { IncomingScreen, PageHelp } from './LinkImport'
+import type { Incoming } from './LinkImport'
+import { songLink } from '../lessons/share'
 
 function SongForm({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onCancel: () => void }) {
   const [title, setTitle] = useState('')
@@ -122,10 +125,11 @@ function ImportSong({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onC
 
 interface Item { id: string; title: string; notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; phrases?: number[]; mine?: boolean }
 
-export function Melodies() {
+export function Melodies({ incoming, onIncomingDone }: { incoming?: Incoming | null; onIncomingDone?: () => void }) {
   const [id, setId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [pageHelp, setPageHelp] = useState(false)
   const [custom, setCustom] = useState<CustomSong[]>(() => loadSongs())
   const all: Item[] = [
     ...MELODIES,
@@ -133,6 +137,15 @@ export function Melodies() {
   ]
   const mel = all.find((m) => m.id === id)
   const persist = (c: CustomSong[]) => { setCustom(c); saveSongs(c) }
+  const share = async (s: CustomSong) => {
+    const url = await songLink(window.location.origin + window.location.pathname, s)
+    try {
+      if (navigator.share) await navigator.share({ title: s.title, url })
+      else { await navigator.clipboard.writeText(url); alert('הקישור הועתק. שלח אותו לעצמך (וואטסאפ או מייל) ופתח אותו בטלפון.') }
+    } catch { /* בוטל */ }
+  }
+  if (incoming) return <IncomingScreen incoming={incoming} onCancel={() => onIncomingDone?.()} onSave={(s) => { persist([...custom, s]); onIncomingDone?.() }} />
+  if (pageHelp) return <PageHelp onBack={() => setPageHelp(false)} />
   if (importing) return <ImportSong onCancel={() => setImporting(false)} onSave={(s) => { persist([...custom, s]); setImporting(false) }} />
   if (adding) return <SongForm onCancel={() => setAdding(false)} onSave={(s) => { persist([...custom, s]); setAdding(false) }} />
   if (!mel) {
@@ -143,10 +156,12 @@ export function Melodies() {
         {all.map((m) => (
           <div key={m.id} className="songrow">
             <button className="btn list" onClick={() => setId(m.id)}>{m.title} · {m.notes.length} צלילים</button>
+            {m.mine && <button className="btn small" title="שלח לטלפון" onClick={() => void share(custom.find((c) => c.id === m.id)!)}>📤</button>}
             {m.mine && <button className="btn danger small" onClick={() => { if (confirm('למחוק את השיר?')) persist(custom.filter((c) => c.id !== m.id)) }}>🗑</button>}
           </div>
         ))}
         <button className="btn primary big" onClick={() => setImporting(true)}>📁 ייבא שיר מקובץ (MIDI / KAR)</button>
+        <button className="btn big" onClick={() => setPageHelp(true)}>🔖 הוסף שיר מדף טאבים (סימנייה)</button>
         <button className="btn big" onClick={() => setAdding(true)}>➕ הוסף שיר ידנית</button>
       </div>
     )
