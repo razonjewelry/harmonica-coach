@@ -110,3 +110,9 @@ describe('שמירת התקדמות', () => {
     expect(loadProgress({ getItem: () => '{bad' }).completed).toEqual({})
   })
 })
+
+describe('קצב השירים', () => {
+  it('מספר הפעימות שווה למספר הצלילים', () => {
+    for (const mel of MELODIES) if (mel.beats) expect(mel.beats.length, mel.title).toBe(mel.notes.length)
+  })
+})

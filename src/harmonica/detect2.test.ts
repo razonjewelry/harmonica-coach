@@ -58,3 +58,11 @@ describe('טאבים', () => {
   })
   it('ספירת הברות', () => { expect(countSyllables(['א-ב ג', 'ד'])).toBe(4) })
 })
+
+describe('קצב בשירים', () => {
+  it('טאבים עם משך: 6+:2', () => {
+    const p = parseTab('4+ 6+:2 5-:0.5')
+    expect(p.beats).toEqual([1, 2, 0.5])
+    expect(p.notes).toEqual(['C5', 'G5', 'F5'])
+  })
+})

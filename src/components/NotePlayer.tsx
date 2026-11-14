@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMic } from '../audio/useMic'
 import type { MicFrame } from '../audio/useMic'
-import { playSequence } from '../audio/tone'
+import { playMelody, stopPlayback } from '../audio/tone'
 import { SequenceMatcher } from '../lessons/sequence'
 import { HarmonicaView, holeLabel } from './HarmonicaView'
 import { MicBar } from './MicBar'
@@ -10,7 +10,7 @@ import { hebrewName } from '../lessons/data'
 import { useFlash } from './useFlash'
 
 /** מאזין לרצף צלילים דרך המיקרופון ומציג מה לנגן עכשיו. משמש לתרגול ולמנגינות. */
-export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?: string[]; onDone?: () => void }) {
+export function NotePlayer({ notes, lyrics, beats, bpm = 100, onDone }: { notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; onDone?: () => void }) {
   const matcher = useRef(new SequenceMatcher(notes))
   const [index, setIndex] = useState(0)
   const [frame, setFrame] = useState<MicFrame | null>(null)
@@ -35,14 +35,15 @@ export function NotePlayer({ notes, lyrics, onDone }: { notes: string[]; lyrics?
     () => matcher.current.target,
   )
 
-  useEffect(() => () => { previewRun.current++ }, [])
+  useEffect(() => () => { previewRun.current++; stopPlayback() }, [])
 
   const restart = () => { matcher.current = new SequenceMatcher(notes); setIndex(0); clearMsg(); setFinished(false) }
-  const stopPreview = () => { previewRun.current++; setPreviewIdx(null) }
+  const stopPreview = () => { previewRun.current++; stopPlayback(); setPreviewIdx(null) }
   const preview = async () => {
     const my = ++previewRun.current
     setPreviewIdx(0)
-    await playSequence(notes, (i) => setPreviewIdx(i), () => previewRun.current === my)
+    const h = playMelody(notes, beats, bpm, (i) => { if (previewRun.current === my) setPreviewIdx(i) })
+    await h.done
     if (previewRun.current === my) setPreviewIdx(null)
   }
 

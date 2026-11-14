@@ -1,23 +1,25 @@
 import { LAYOUT } from '../harmonica/notes'
 
-export interface ParsedTab { notes: string[]; error: string | null }
+export interface ParsedTab { notes: string[]; beats: number[]; error: string | null }
 
-/** מפרש כתיבה בסגנון טאבים: "4+ 4+ 6+" (+ נשיפה, - שאיפה). אפשר גם "4↑ 4↓". */
+/** מפרש כתיבה בסגנון טאבים: "4+ 4+ 6+" (+ נשיפה, - שאיפה). אפשר גם "4↑ 4↓". משך בפעימות אחרי נקודתיים: "6+:2" */
 export function parseTab(text: string): ParsedTab {
   const tokens = text.replace(/[,\n\r]+/g, ' ').trim().split(/\s+/).filter(Boolean)
   const notes: string[] = []
+  const beats: number[] = []
   for (const t of tokens) {
-    const m = /^(\d{1,2})([+\-↑↓])$/.exec(t)
-    if (!m) return { notes: [], error: `לא הבנתי את "${t}". כתוב מספר חור ואז + לנשיפה או - לשאיפה, למשל 4+ או 5-` }
+    const m = /^(\d{1,2})([+\-↑↓])(?::(\d+(?:\.\d+)?))?$/.exec(t)
+    if (!m) return { notes: [], beats: [], error: `לא הבנתי את "${t}". כתוב מספר חור ואז + לנשיפה או - לשאיפה, למשל 4+ או 5-` }
     const hole = Number(m[1])
-    if (!LAYOUT[hole]) return { notes: [], error: `חור ${hole} לא קיים. יש חורים 1 עד 10` }
+    if (!LAYOUT[hole]) return { notes: [], beats: [], error: `חור ${hole} לא קיים. יש חורים 1 עד 10` }
     notes.push(LAYOUT[hole][m[2] === '+' || m[2] === '↑' ? 'blow' : 'draw'])
+    beats.push(m[3] ? Math.min(8, Math.max(0.25, Number(m[3]))) : 1)
   }
-  if (!notes.length) return { notes: [], error: 'לא הוזנו צלילים' }
-  return { notes, error: null }
+  if (!notes.length) return { notes: [], beats: [], error: 'לא הוזנו צלילים' }
+  return { notes, beats, error: null }
 }
 
-export interface CustomSong { id: string; title: string; notes: string[]; lyrics: string[] }
+export interface CustomSong { id: string; title: string; notes: string[]; lyrics: string[]; beats?: number[] }
 const KEY = 'hc.songs.v1'
 
 export function loadSongs(store: Pick<Storage, 'getItem'> = localStorage): CustomSong[] {

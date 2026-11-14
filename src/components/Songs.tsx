@@ -18,7 +18,7 @@ function SongForm({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onCan
       <h2>הוספת שיר משלי</h2>
       <p className="sub">השיר נשמר רק בטלפון שלך. כתוב את הצלילים לפי חורים: מספר חור ואז + לנשיפה או - לשאיפה.</p>
       <label className="field">שם השיר<input value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-      <label className="field">צלילים (טאבים), למשל: 4+ 4+ 6+ 6+ 6- 6-
+      <label className="field">צלילים (טאבים), למשל: 4+ 4+ 6+ 6+ 6- 6-. לצליל ארוך הוסף נקודתיים ומספר פעימות: 6+:2
         <textarea dir="ltr" rows={3} value={tab} onChange={(e) => setTab(e.target.value)} />
       </label>
       {parsed?.error && <div className="warn">{parsed.error}</div>}
@@ -30,14 +30,14 @@ function SongForm({ onSave, onCancel }: { onSave: (s: CustomSong) => void; onCan
         <div className={mismatch ? 'warn' : 'sub'}>{syl} הברות מול {parsed.notes.length} צלילים{mismatch ? '. צריך שיהיה מספר זהה' : ''}</div>
       )}
       <div className="row">
-        <button className="btn primary" disabled={!canSave} onClick={() => onSave({ id: 'c' + Date.now(), title: title.trim(), notes: parsed!.notes, lyrics: lines })}>שמור שיר</button>
+        <button className="btn primary" disabled={!canSave} onClick={() => onSave({ id: 'c' + Date.now(), title: title.trim(), notes: parsed!.notes, beats: parsed!.beats, lyrics: lines })}>שמור שיר</button>
         <button className="btn" onClick={onCancel}>ביטול</button>
       </div>
     </div>
   )
 }
 
-interface Item { id: string; title: string; notes: string[]; lyrics?: string[]; mine?: boolean }
+interface Item { id: string; title: string; notes: string[]; lyrics?: string[]; beats?: number[]; bpm?: number; mine?: boolean }
 
 export function Melodies() {
   const [id, setId] = useState<string | null>(null)
@@ -68,7 +68,7 @@ export function Melodies() {
   return (
     <>
       <h2 className="pad">{mel.title}</h2>
-      <NotePlayer key={mel.id} notes={mel.notes} lyrics={mel.lyrics} />
+      <NotePlayer key={mel.id} notes={mel.notes} lyrics={mel.lyrics} beats={mel.beats} bpm={mel.bpm} />
       <div className="row"><button className="btn" onClick={() => setId(null)}>חזרה לרשימה</button></div>
     </>
   )
